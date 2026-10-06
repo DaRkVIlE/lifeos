@@ -23,21 +23,15 @@ from flask import Flask, request, jsonify, g, send_from_directory
 
 app = Flask(__name__, static_folder=None)
 
-# CORS — allow Vite dev server and any localhost
+# CORS — allow all origins by default or custom via CORS_ORIGINS
 from flask_cors import CORS
-CORS(app, origins=[
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:3000",
-    "http://localhost:8080",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8080",
-])
+allowed_origins = os.environ.get('CORS_ORIGINS', '*').split(',') if os.environ.get('CORS_ORIGINS') else '*'
+CORS(app, resources={r"/*": {"origins": allowed_origins}})
 
-DB_PATH = os.path.join(os.path.expanduser('~'), '.lifeos', 'data.db')
-DEFAULT_USER_ID = 'local-user-001'
+DATA_DIR = os.environ.get('DATA_DIR', os.path.join(os.path.expanduser('~'), '.lifeos'))
+os.makedirs(DATA_DIR, exist_ok=True)
+DB_PATH = os.environ.get('LIFEOS_DB_PATH', os.path.join(DATA_DIR, 'data.db'))
+DEFAULT_USER_ID = os.environ.get('DEFAULT_USER_ID', 'local-user-001')
 AI_BRIDGE_URL = os.environ.get('AI_BRIDGE_URL', 'http://localhost:11435')
 
 # ═══════════════════════════════════════════════════════════════

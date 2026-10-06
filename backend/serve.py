@@ -102,9 +102,11 @@ def open_browser(port):
         print(f"  Open manually: {url}")
 
 def main():
+    default_port = int(os.environ.get('PORT', 8080))
+    is_headless = bool(os.environ.get('PORT') or os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('DOCKER_CONTAINER'))
     parser = argparse.ArgumentParser(description='LifeOS Local Server')
-    parser.add_argument('--port', type=int, default=8080, help='Port (default: 8080)')
-    parser.add_argument('--no-open', action='store_true', help="Don't open browser")
+    parser.add_argument('--port', type=int, default=default_port, help=f'Port (default: {default_port})')
+    parser.add_argument('--no-open', action='store_true', default=is_headless, help="Don't open browser")
     parser.add_argument('--no-build', action='store_true', help="Skip build check")
     args = parser.parse_args()
     
@@ -118,12 +120,13 @@ def main():
     # Patch Flask app to serve frontend
     app = patch_app_for_static()
     
-    # Open browser in background
-    if not args.no_open:
+    # Open browser in background (if not headless)
+    if not args.no_open and not is_headless:
         threading.Thread(target=open_browser, args=(args.port,), daemon=True).start()
     
+    from app import DB_PATH
     print(f"  URL: http://localhost:{args.port}")
-    print(f"  Database: ~/.lifeos/data.db")
+    print(f"  Database: {DB_PATH}")
     print("=" * 40)
     print("  Press Ctrl+C to stop")
     print()
