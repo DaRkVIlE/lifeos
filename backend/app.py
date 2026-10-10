@@ -825,15 +825,15 @@ def init_db():
     db.executescript(SCHEMA_SQL)
     # Ensure default user exists
     db.execute(
-        "INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)",
-        (DEFAULT_USER_ID, 'gabriel@experia.solutions', 'Gabriel Ferreira')
+        "INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, NULL, ?)",
+        (DEFAULT_USER_ID, 'GABE')
     )
     db.execute(
-        "INSERT OR IGNORE INTO user_profiles (user_id, email, full_name, onboarding_complete) VALUES (?, ?, ?, 1)",
-        (DEFAULT_USER_ID, 'gabriel@experia.solutions', 'Gabriel Ferreira')
+        "INSERT OR IGNORE INTO user_profiles (user_id, email, full_name, onboarding_complete) VALUES (?, NULL, ?, 1)",
+        (DEFAULT_USER_ID, 'Gabriel Lima (GABE)')
     )
     db.execute(
-        "INSERT OR IGNORE INTO user_xp (user_id, total_xp, level) VALUES (?, 55, 1)",
+        "INSERT OR IGNORE INTO user_xp (user_id, total_xp, level) VALUES (?, 0, 1)",
         (DEFAULT_USER_ID,)
     )
     db.commit()
