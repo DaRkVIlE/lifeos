@@ -1421,12 +1421,156 @@ def ai_chat():
     )
     db.commit()
 
-    return supabase_response(data={
-        "id": assistant_msg_id,
-        "role": "assistant",
-        "content": reply,
-        "created_at": now_iso()
-    })
+
+# ═══════════════════════════════════════════════════════════════
+# LLM Proxy Handler (Handles /api/llm-proxy.php, /api/intent-proxy.php)
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/llm-proxy.php', methods=['POST'])
+@app.route('/api/llm-proxy', methods=['POST'])
+@app.route('/api/intent-proxy.php', methods=['POST'])
+@app.route('/api/intent-proxy', methods=['POST'])
+def llm_proxy():
+    """Proxy LLM calls from intent-engine and LifeOS AI tools to OpenRouter/Groq/Gemini/OpenAI."""
+    body = request.get_json(force=True, silent=True) or {}
+    messages = body.get('messages', [])
+    user_msg = body.get('message', '')
+    if not messages and user_msg:
+        messages = [{"role": "user", "content": user_msg}]
+
+    # Provider & API Key resolution
+    openrouter_key = os.environ.get('OPENROUTER_API_KEY')
+    groq_key = os.environ.get('GROQ_API_KEY')
+    gemini_key = os.environ.get('GEMINI_API_KEY')
+    openai_key = os.environ.get('OPENAI_API_KEY')
+
+    req_model = body.get('model') or 'google/gemini-2.0-flash-001'
+    req_format = body.get('format', 'text')
+
+    # 1. OpenRouter (Multi-model default)
+    if openrouter_key:
+        api_url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {openrouter_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://app.runlifeos.com",
+            "X-Title": "LifeOS"
+        }
+        payload = {
+            "model": req_model,
+            "messages": messages
+        }
+        if req_format == 'json':
+            payload["response_format"] = {"type": "json_object"}
+        try:
+            resp = http_requests.post(api_url, headers=headers, json=payload, timeout=45)
+            if resp.ok:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                return jsonify({
+                    "content": content,
+                    "provider": "openrouter",
+                    "model": req_model,
+                    "usage": data.get('usage', {})
+                })
+            else:
+                return jsonify({"error": f"OpenRouter error ({resp.status_code}): {resp.text}"}), resp.status_code
+        except Exception as e:
+            return jsonify({"error": f"OpenRouter call failed: {str(e)}"}), 500
+
+    # 2. Groq (Ultra-fast)
+    elif groq_key:
+        api_url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {groq_key}",
+            "Content-Type": "application/json"
+        }
+        groq_model = "llama-3.3-70b-versatile"
+        payload = {
+            "model": groq_model,
+            "messages": messages
+        }
+        if req_format == 'json':
+            payload["response_format"] = {"type": "json_object"}
+        try:
+            resp = http_requests.post(api_url, headers=headers, json=payload, timeout=45)
+            if resp.ok:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                return jsonify({
+                    "content": content,
+                    "provider": "groq",
+                    "model": groq_model,
+                    "usage": data.get('usage', {})
+                })
+            else:
+                return jsonify({"error": f"Groq error ({resp.status_code}): {resp.text}"}), resp.status_code
+        except Exception as e:
+            return jsonify({"error": f"Groq call failed: {str(e)}"}), 500
+
+    # 3. Gemini (Google AI Studio)
+    elif gemini_key:
+        api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {gemini_key}",
+            "Content-Type": "application/json"
+        }
+        gemini_model = "gemini-2.0-flash"
+        payload = {
+            "model": gemini_model,
+            "messages": messages
+        }
+        if req_format == 'json':
+            payload["response_format"] = {"type": "json_object"}
+        try:
+            resp = http_requests.post(api_url, headers=headers, json=payload, timeout=45)
+            if resp.ok:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                return jsonify({
+                    "content": content,
+                    "provider": "gemini",
+                    "model": gemini_model,
+                    "usage": data.get('usage', {})
+                })
+            else:
+                return jsonify({"error": f"Gemini error ({resp.status_code}): {resp.text}"}), resp.status_code
+        except Exception as e:
+            return jsonify({"error": f"Gemini call failed: {str(e)}"}), 500
+
+    # 4. OpenAI
+    elif openai_key:
+        api_url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {openai_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "gpt-4o-mini",
+            "messages": messages
+        }
+        if req_format == 'json':
+            payload["response_format"] = {"type": "json_object"}
+        try:
+            resp = http_requests.post(api_url, headers=headers, json=payload, timeout=45)
+            if resp.ok:
+                data = resp.json()
+                content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                return jsonify({
+                    "content": content,
+                    "provider": "openai",
+                    "model": "gpt-4o-mini",
+                    "usage": data.get('usage', {})
+                })
+            else:
+                return jsonify({"error": f"OpenAI error ({resp.status_code}): {resp.text}"}), resp.status_code
+        except Exception as e:
+            return jsonify({"error": f"OpenAI call failed: {str(e)}"}), 500
+
+    # Fallback when no keys configured
+    return jsonify({
+        "error": "Nenhuma chave de IA configurada. Defina OPENROUTER_API_KEY, GROQ_API_KEY, GEMINI_API_KEY ou OPENAI_API_KEY no arquivo .env ou nas variáveis do Railway."
+    }), 503
 
 
 # ═══════════════════════════════════════════════════════════════
