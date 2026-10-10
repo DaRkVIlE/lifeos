@@ -812,21 +812,28 @@ CREATE INDEX IF NOT EXISTS idx_bills_user ON bills(user_id);
 """
 
 def init_db():
-    """Create all tables and seed default user."""
+    """Create all tables and seed default user or copy pre-seeded database."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    template_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lifeos.db')
+    if not os.path.exists(DB_PATH) and os.path.exists(template_db):
+        import shutil
+        shutil.copy2(template_db, DB_PATH)
+        print(f"[LifeOS] Copied pre-seeded template from {template_db} to {DB_PATH}")
+        return
+
     db = sqlite3.connect(DB_PATH)
     db.executescript(SCHEMA_SQL)
     # Ensure default user exists
     db.execute(
         "INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, ?, ?)",
-        (DEFAULT_USER_ID, 'local@lifeos.app', 'LifeOS User')
+        (DEFAULT_USER_ID, 'gabriel@experia.solutions', 'Gabriel Ferreira')
     )
     db.execute(
         "INSERT OR IGNORE INTO user_profiles (user_id, email, full_name, onboarding_complete) VALUES (?, ?, ?, 1)",
-        (DEFAULT_USER_ID, 'local@lifeos.app', 'LifeOS User')
+        (DEFAULT_USER_ID, 'gabriel@experia.solutions', 'Gabriel Ferreira')
     )
     db.execute(
-        "INSERT OR IGNORE INTO user_xp (user_id, total_xp, level) VALUES (?, 0, 1)",
+        "INSERT OR IGNORE INTO user_xp (user_id, total_xp, level) VALUES (?, 55, 1)",
         (DEFAULT_USER_ID,)
     )
     db.commit()
