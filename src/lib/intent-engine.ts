@@ -2299,12 +2299,13 @@ export interface AISettings {
 
 const AI_SETTINGS_KEY = 'lifeos-ai-settings';
 
-const ALLOWED_PROVIDERS = ['openrouter', 'gemini', 'anthropic', 'openai'];
+const ALLOWED_PROVIDERS = ['openrouter', 'groq', 'gemini', 'anthropic', 'openai'];
 
 export function getAISettings(): AISettings {
+  const isLocalMode = import.meta.env.VITE_USE_LOCAL_API === 'true';
   const defaults: AISettings = {
-    provider: 'openrouter',
-    model: 'google/gemini-2.0-flash-001',
+    provider: isLocalMode ? 'groq' : 'openrouter',
+    model: isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001',
     proxyUrl: '/api/llm-proxy.php',
     enabled: true,
   };
@@ -2314,14 +2315,14 @@ export function getAISettings(): AISettings {
       const parsed = JSON.parse(stored);
       // Migrate from expired Gemini direct → OpenRouter
       if (parsed.provider === 'gemini') {
-        parsed.provider = 'openrouter';
-        parsed.model = 'google/gemini-2.0-flash-001';
+        parsed.provider = isLocalMode ? 'groq' : 'openrouter';
+        parsed.model = isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
         try { localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(parsed)); } catch { /* Safari private */ }
       }
       // Force provider to OpenRouter if saved provider isn't configured
       if (!ALLOWED_PROVIDERS.includes(parsed.provider)) {
-        parsed.provider = 'openrouter';
-        parsed.model = 'google/gemini-2.0-flash-001';
+        parsed.provider = isLocalMode ? 'groq' : 'openrouter';
+        parsed.model = isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
         try { localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(parsed)); } catch { /* Safari private */ }
       }
       return { ...defaults, ...parsed };

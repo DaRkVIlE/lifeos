@@ -670,7 +670,14 @@ export function AIChat() {
       
       let friendlyMsg = `Algo deu errado: ${errBody?.error || rawMsg}`;
       const isDailyLimit = errBody?.error?.includes('Daily limit') || rawMsg.includes('Daily limit');
-      const isRateLimit = isDailyLimit || rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('Rate limit') || errBody?.error?.includes('limit');
+      const isRateLimit = isDailyLimit
+        || rawMsg.includes('429')
+        || rawMsg.includes('RESOURCE_EXHAUSTED')
+        || rawMsg.includes('Rate limit exceeded')
+        || rawMsg.includes('rate_limit_exceeded')
+        || errBody?.error?.toLowerCase().includes('rate limit')
+        || errBody?.error?.toLowerCase().includes('daily limit')
+        || errBody?.error?.toLowerCase().includes('rate_limit');
       
       if (isRateLimit) {
         const rl = errBody?.rateLimit || rateLimit;
