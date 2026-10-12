@@ -1012,16 +1012,20 @@ interface ProxyConfig {
   proxyUrl: string;
 }
 
+const _isLocalMode = import.meta.env.VITE_USE_LOCAL_API === 'true';
+const _defaultProvider = _isLocalMode ? 'groq' : 'openrouter';
+const _defaultModel = _isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
+
 const DEFAULT_PROXY_CONFIG: ProxyConfig = {
-  provider: 'openrouter',
-  model: 'google/gemini-2.0-flash-001',
-  proxyUrl: '/api/intent-proxy.php',  // Unified Intent API (shared with Telegram bot)
+  provider: _defaultProvider,
+  model: _defaultModel,
+  proxyUrl: _isLocalMode ? '/api/llm-proxy.php' : '/api/intent-proxy.php',  // In local mode, bypass intent-proxy and use llm-proxy directly
 };
 
 // Legacy config for fallback
 const LEGACY_PROXY_CONFIG: ProxyConfig = {
-  provider: 'openrouter',
-  model: 'google/gemini-2.0-flash-001',
+  provider: _defaultProvider,
+  model: _defaultModel,
   proxyUrl: '/api/llm-proxy.php',
 };
 
@@ -2313,17 +2317,20 @@ export function getAISettings(): AISettings {
     const stored = localStorage.getItem(AI_SETTINGS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Migrate from expired Gemini direct → OpenRouter
-      if (parsed.provider === 'gemini') {
+      // Migrate from expired Gemini direct or unconfigured OpenRouter in local mode
+      if (parsed.provider === 'gemini' || (isLocalMode && parsed.provider === 'openrouter')) {
         parsed.provider = isLocalMode ? 'groq' : 'openrouter';
         parsed.model = isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
         try { localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(parsed)); } catch { /* Safari private */ }
       }
-      // Force provider to OpenRouter if saved provider isn't configured
+      // Force provider to groq or openrouter if saved provider isn't configured
       if (!ALLOWED_PROVIDERS.includes(parsed.provider)) {
         parsed.provider = isLocalMode ? 'groq' : 'openrouter';
         parsed.model = isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
         try { localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(parsed)); } catch { /* Safari private */ }
+      }
+      if (isLocalMode) {
+        parsed.proxyUrl = '/api/llm-proxy.php';
       }
       return { ...defaults, ...parsed };
     }
