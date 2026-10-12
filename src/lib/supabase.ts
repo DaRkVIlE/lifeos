@@ -9,22 +9,22 @@ const _IS_ELECTRON = typeof __IS_ELECTRON__ !== 'undefined' && __IS_ELECTRON__;
 // tauri-api.ts). Use a dummy URL and disable all background network activity to
 // prevent "Connection refused" errors from autoRefreshToken hitting localhost:8080.
 // In Electron mode, we NEED the real Supabase client for Google OAuth token exchange.
-const _NOOP_MODE = _IS_TAURI && !_IS_ELECTRON;
+// In local-api mode, VITE_SUPABASE_URL is intentionally absent — use noop too.
+const _IS_LOCAL_API = import.meta.env.VITE_USE_LOCAL_API === 'true' || !!import.meta.env.VITE_API_BASE_URL;
+const _NOOP_MODE = (_IS_TAURI && !_IS_ELECTRON) || _IS_LOCAL_API;
 const SUPABASE_URL = _NOOP_MODE ? 'https://noop.invalid' : (import.meta.env.VITE_SUPABASE_URL || '');
 const SUPABASE_ANON_KEY = _NOOP_MODE ? 'noop' : (import.meta.env.VITE_SUPABASE_ANON_KEY || '');
 
 // Warn but don't throw — local-api mode may import this module but never use it
-if (!_IS_TAURI && !SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  if (!import.meta.env.VITE_USE_LOCAL_API && !import.meta.env.VITE_API_BASE_URL) {
-    console.error('[supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — Supabase client will not work');
-  }
+if (!_NOOP_MODE && (!SUPABASE_URL || !SUPABASE_ANON_KEY)) {
+  console.error('[supabase] Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY — Supabase client will not work');
 }
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    autoRefreshToken: !_IS_TAURI,
-    persistSession: !_IS_TAURI,
-    detectSessionInUrl: !_IS_TAURI,
+    autoRefreshToken: !_NOOP_MODE,
+    persistSession: !_NOOP_MODE,
+    detectSessionInUrl: !_NOOP_MODE,
     // Keep session alive — refresh before expiry
     flowType: 'pkce',
   },

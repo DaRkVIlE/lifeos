@@ -36,14 +36,14 @@ interface MoreGroup {
 const MAIN_TABS: Tab[] = getMobileMainTabs().map(f => ({
   to: f.route,
   icon: ICON_MAP[f.icon] || LayoutDashboard,
-  label: f.id === 'dashboard' ? 'Home' : f.name,
+  label: f.id === 'dashboard' ? 'Início' : f.name,
   color: f.color,
 }));
 
 const moreGroups = getMobileMoreGroups();
 const MORE_GROUPS: MoreGroup[] = [
   {
-    label: 'Life',
+    label: 'Vida',
     items: moreGroups.life.map(f => ({
       to: f.route,
       icon: ICON_MAP[f.icon] || LayoutDashboard,
@@ -53,7 +53,7 @@ const MORE_GROUPS: MoreGroup[] = [
     })),
   },
   {
-    label: 'Growth',
+    label: 'Crescimento',
     items: moreGroups.growth.map(f => ({
       to: f.route,
       icon: ICON_MAP[f.icon] || LayoutDashboard,
@@ -66,7 +66,7 @@ const MORE_GROUPS: MoreGroup[] = [
 // Flat list for isActive checks
 const ALL_MORE_ITEMS: TabWithBadge[] = [
   ...MORE_GROUPS.flatMap(g => g.items),
-  { to: '__logout__', icon: LogOut, label: 'Log Out', color: '#EF4444' },
+  { to: '__logout__', icon: LogOut, label: 'Sair', color: '#EF4444' },
 ];
 
 export function MobileNav() {

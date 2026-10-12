@@ -105,9 +105,16 @@ export default defineConfig(({ mode }) => {
   ],
   base: isDesktop ? './' : '/',
   server: {
+    // Proxy /api requests to Flask backend in dev mode
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8080',
+        changeOrigin: true,
+      },
+    },
     // Serve academy content files for dev mode
     fs: {
-      allow: ['.', '/mnt/data/tmp/academy'],
+      allow: ['.', '/mnt/data/tmp/academy', 'C:/Users/Usuario/lifeos'],
     },
   },
   esbuild: {

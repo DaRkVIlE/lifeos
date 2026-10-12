@@ -364,14 +364,25 @@ class QueryBuilder<T = any> implements PromiseLike<PostgrestResponse<T>> {
     return result;
   }
 
-  // Make the builder thenable (await-able)
+    // Make the builder thenable (await-able) and promise-compliant
   then<TResult1 = PostgrestResponse<T>, TResult2 = never>(
     onfulfilled?: ((value: PostgrestResponse<T>) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | null
-  ): PromiseLike<TResult1 | TResult2> {
+  ): Promise<TResult1 | TResult2> {
     return this._execute().then(onfulfilled, onrejected);
   }
+
+  catch<TResult = never>(
+    onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | null
+  ): Promise<PostgrestResponse<T> | TResult> {
+    return this._execute().catch(onrejected);
+  }
+
+  finally(onfinally?: (() => void) | null): Promise<PostgrestResponse<T>> {
+    return this._execute().finally(onfinally);
+  }
 }
+
 
 // ─── Auth Adapter ────────────────────────────────────────────────────
 // Mimics supabase.auth.* methods with local JWT-based auth
@@ -519,6 +530,30 @@ export const supabase = {
       method: 'POST',
       body: params ? JSON.stringify(params) : undefined,
     });
+  },
+
+  // Real-time stubs — no WebSocket subscriptions in local mode
+  channel(_name: string, _opts?: any) {
+    const noopChannel = {
+      on: () => noopChannel,
+      subscribe: () => noopChannel,
+      unsubscribe: () => {},
+    };
+    return noopChannel;
+  },
+  removeChannel(_channel: any) {},
+
+  // Storage stub
+  storage: {
+    from(_bucket: string) {
+      return {
+        upload: async (_path: string, _file: any, _opts?: any) => ({ data: { path: _path }, error: null }),
+        getPublicUrl: (_path: string) => ({ data: { publicUrl: _path } }),
+        download: async (_path: string) => ({ data: null, error: null }),
+        remove: async (_paths: string[]) => ({ data: [], error: null }),
+        list: async () => ({ data: [], error: null }),
+      };
+    },
   },
 
   auth: localAuth,

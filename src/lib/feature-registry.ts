@@ -23,7 +23,7 @@ export interface FeatureModule {
 const FEATURES: FeatureModule[] = [
   {
     id: 'dashboard',
-    name: 'Today',
+    name: 'Hoje',
     route: '/',
     icon: 'LayoutDashboard',
     color: '#00D4FF',
@@ -37,7 +37,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'schedule',
-    name: 'Schedule',
+    name: 'Agenda',
     route: '/schedule',
     icon: 'Calendar',
     color: '#A855F7',
@@ -51,7 +51,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'goals',
-    name: 'Goals',
+    name: 'Metas',
     route: '/goals',
     icon: 'Target',
     color: '#39FF14',
@@ -65,7 +65,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'habits',
-    name: 'Habits',
+    name: 'Hábitos',
     route: '/habits',
     icon: 'Flame',
     color: '#F97316',
@@ -79,7 +79,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'finances',
-    name: 'Finances',
+    name: 'Finanças',
     route: '/finances',
     icon: 'Wallet',
     color: '#FACC15',
@@ -93,7 +93,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'health',
-    name: 'Health',
+    name: 'Saúde',
     route: '/health',
     icon: 'Heart',
     color: '#F43F5E',
@@ -121,7 +121,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'character',
-    name: 'Character',
+    name: 'Personagem',
     route: '/character',
     icon: 'Swords',
     color: '#D4AF37',
@@ -135,7 +135,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'reflect',
-    name: 'Reflect',
+    name: 'Refletir',
     route: '/reflect',
     icon: 'BookOpen',
     color: '#EC4899',
@@ -149,7 +149,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'academy',
-    name: 'Academy',
+    name: 'Academia',
     route: '/academy',
     icon: 'GraduationCap',
     color: '#D4AF37',
@@ -163,7 +163,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'lessons',
-    name: "Teddy's Lessons",
+    name: 'Aulas do Teddy',
     route: '/lessons',
     icon: 'Music',
     color: '#FFD700',
@@ -177,7 +177,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'replicator',
-    name: 'Replicator',
+    name: 'Replicador',
     route: '/replicator',
     icon: 'Package',
     color: '#10B981',
@@ -191,7 +191,7 @@ const FEATURES: FeatureModule[] = [
   },
   {
     id: 'settings',
-    name: 'Settings',
+    name: 'Configurações',
     route: '/settings',
     icon: 'Settings',
     color: '#64748B',

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Brain } from 'lucide-react';
 import { useAgentStore } from '../../stores/useAgentStore';
 import { useUserStore } from '../../stores/useUserStore';
@@ -66,13 +66,13 @@ export function AgentChat({ onClose }: AgentChatProps) {
   };
 
   const quickPrompts = [
-    "Plan my week",
-    "Goal check-in",
-    "What should I focus on?"
+    "Missão de hoje",
+    "Status das metas",
+    "O que focar agora?"
   ];
 
   const coachingQuickActions = [
-    { label: "Plan my week", prompt: "Help me plan my week based on my current goals and schedule" },
+    { label: "Missão de hoje", prompt: "Help me plan my week based on my current goals and schedule" },
     { label: "Review goals", prompt: "Give me a progress check on all my active goals" },
     { label: "Reschedule overdue", prompt: "Help me reschedule my overdue tasks into realistic slots this week" },
   ];
@@ -82,7 +82,7 @@ export function AgentChat({ onClose }: AgentChatProps) {
       <div className="agent-chat-header">
         <div className="agent-chat-title">
           <span className="agent-icon"><Brain size={18} /></span>
-          <span>LifeOS Agent</span>
+          <span>Ykaros · DA</span>
           <span className={`agent-status ${isOnline ? 'online' : 'offline'}`} />
         </div>
         {onClose && (
@@ -115,7 +115,7 @@ export function AgentChat({ onClose }: AgentChatProps) {
           {messages.length === 0 ? (
             <div className="agent-chat-empty">
               <div className="agent-empty-icon"><Brain size={32} /></div>
-              <p>Ask me anything about your goals, habits, or schedule</p>
+              <p>E aí, Gabe! Em que vamos avançar agora? Missão do dia, hábitos ou metas?</p>
               <div className="agent-quick-prompts">
                 {quickPrompts.map((prompt, i) => (
                   <button

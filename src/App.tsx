@@ -384,7 +384,7 @@ function App() {
   if (!oauthReady) return <GlobalLoadingSpinner />;
 
   return (
-    <Router {...(isDesktop ? {} : { basename: "/app" })}>
+    <Router {...(isDesktop ? {} : (import.meta.env.VITE_USE_LOCAL_API === 'true' ? {} : { basename: "/app" }))}>
       {!isDesktop && <UpdateBanner />}
       <ConnectionBanner />
       <WhatsNew />

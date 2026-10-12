@@ -57,9 +57,15 @@ async function _callLLMProxyOnce(
   // Get auth token if needed
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (!skipAuth) {
-    const { data: { session } } = await useUserStore.getState().getSessionCached();
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
+    const isLocalMode = import.meta.env.VITE_USE_LOCAL_API === 'true';
+    if (isLocalMode) {
+      // Inject the seeded local-token directly; Flask does not validate JWTs
+      headers['Authorization'] = `Bearer ${localStorage.getItem('local_auth_token') || 'local-token'}`;
+    } else {
+      const { data: { session } } = await useUserStore.getState().getSessionCached();
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
     }
   }
 

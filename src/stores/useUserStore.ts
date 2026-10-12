@@ -231,7 +231,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   initAuth: () => {
     // ── Tauri / Electron mode: skip network auth, use local user immediately ──
     const detectedEnv = getEnvironment();
-    if (detectedEnv === 'tauri' || detectedEnv === 'electron') {
+    if (detectedEnv === 'tauri' || detectedEnv === 'electron' || detectedEnv === 'local-api') {
       set({
         user: { id: 'local-user-001', email: 'local@lifeos.app', email_confirmed_at: new Date().toISOString(), user_metadata: { full_name: 'LifeOS User' } } as any,
         mode: 'local',
@@ -239,6 +239,19 @@ export const useUserStore = create<UserState>((set, get) => ({
         connectionError: false,
         profileLoading: true,
       });
+      // Seed a local session so AI proxy auth checks pass (access_token=local-token)
+      const existingSession = localStorage.getItem('local_auth_session');
+      if (!existingSession) {
+        const localSession = {
+          access_token: 'local-token',
+          refresh_token: 'local-refresh',
+          expires_in: 999999,
+          expires_at: 9999999999,
+          user: { id: 'local-user-001', email: 'local@lifeos.app', user_metadata: { full_name: 'LifeOS User' } },
+        };
+        localStorage.setItem('local_auth_session', JSON.stringify(localSession));
+        localStorage.setItem('local_auth_token', 'local-token');
+      }
       // Fetch profile from SQLite via IPC (NOT IndexedDB local-db.ts)
       // Use SELECT * — local schema has full_name instead of display_name, no occupation/primary_focus
       supabase.from('user_profiles')

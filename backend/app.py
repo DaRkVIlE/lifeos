@@ -21,6 +21,16 @@ from flask import Flask, request, jsonify, g, send_from_directory
 # App Setup
 # ═══════════════════════════════════════════════════════════════
 
+# Auto-load .env file if present in app root
+_env_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+if os.path.exists(_env_file):
+    with open(_env_file, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith('#') and '=' in _line:
+                _k, _v = _line.split('=', 1)
+                os.environ[_k.strip()] = _v.strip().strip('"').strip("'")
+
 app = Flask(__name__, static_folder=None)
 
 # CORS — allow all origins by default or custom via CORS_ORIGINS
@@ -809,6 +819,83 @@ CREATE INDEX IF NOT EXISTS idx_journal_date ON journal_entries(date);
 CREATE INDEX IF NOT EXISTS idx_income_user ON income(user_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_user ON expenses(user_id);
 CREATE INDEX IF NOT EXISTS idx_bills_user ON bills(user_id);
+
+-- Quests
+CREATE TABLE IF NOT EXISTS quests (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    quest_type TEXT DEFAULT 'daily',
+    quest_data TEXT DEFAULT '{}',
+    progress REAL DEFAULT 0,
+    target REAL DEFAULT 1,
+    reward_xp INTEGER DEFAULT 10,
+    expires_at TEXT,
+    completed_at TEXT,
+    source_type TEXT DEFAULT 'system',
+    source_id TEXT,
+    source_table TEXT,
+    priority TEXT DEFAULT 'medium',
+    context_label TEXT DEFAULT '',
+    category TEXT DEFAULT 'productivity',
+    v2_title TEXT,
+    v2_description TEXT,
+    v2_icon TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Error Logs
+CREATE TABLE IF NOT EXISTS error_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,
+    error_message TEXT,
+    error_stack TEXT,
+    component_stack TEXT,
+    metadata TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Junction Traditions
+CREATE TABLE IF NOT EXISTS junction_traditions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    icon TEXT DEFAULT '🔮',
+    description TEXT,
+    color TEXT DEFAULT '#A855F7',
+    background_gradient TEXT,
+    is_active INTEGER DEFAULT 1,
+    paths TEXT DEFAULT '[]',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Messages (Social / Chat)
+CREATE TABLE IF NOT EXISTS messages (
+    id TEXT PRIMARY KEY,
+    sender_id TEXT NOT NULL,
+    receiver_id TEXT,
+    group_id TEXT,
+    content TEXT,
+    message_type TEXT DEFAULT 'text',
+    metadata TEXT DEFAULT '{}',
+    read_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Agent Actions (Audit Log)
+CREATE TABLE IF NOT EXISTS agent_actions (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    agent_id TEXT NOT NULL DEFAULT 'ykaros',
+    tool_name TEXT NOT NULL,
+    parameters TEXT DEFAULT '{}',
+    result TEXT DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'pending',
+    error_message TEXT,
+    reversible INTEGER DEFAULT 1,
+    rollback_payload TEXT DEFAULT '{}',
+    user_id TEXT
+);
 """
 
 def init_db():
@@ -859,6 +946,7 @@ ALLOWED_TABLES = {
     'projects', 'notes', 'assets', 'asset_maintenance', 'asset_bills',
     'asset_documents', 'ai_insights', 'chat_messages', 'unified_events',
     'sync_meta', 'lesson_progress', 'parts_inventory',
+    'quests', 'error_logs', 'junction_traditions', 'messages', 'agent_actions',
 }
 
 SOFT_DELETE_TABLES = {
@@ -876,7 +964,7 @@ TABLE_PK = {
 }
 
 # Tables that don't have a user_id column
-NO_USER_ID_TABLES = {'sync_meta'}
+NO_USER_ID_TABLES = {'sync_meta', 'junction_traditions'}
 
 RESERVED_PARAMS = {'select', 'order', 'limit', 'offset', 'single', 'count',
                     'on_conflict', 'return', 'or'}
@@ -1485,7 +1573,7 @@ def llm_proxy():
             "Authorization": f"Bearer {groq_key}",
             "Content-Type": "application/json"
         }
-        groq_model = "llama-3.3-70b-versatile"
+        groq_model = os.environ.get('GROQ_MODEL') or "openai/gpt-oss-120b"
         payload = {
             "model": groq_model,
             "messages": messages
@@ -1960,10 +2048,34 @@ def academy_overview():
 
 
 # ═══════════════════════════════════════════════════════════════
+# Serve Frontend (Production Mode)
+# ═══════════════════════════════════════════════════════════════
+
+DIST_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__), '..', 'dist'))
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    # Don't intercept API routes
+    if path.startswith('api/') or path == 'api':
+        return supabase_response(error={"message": "API route not found"}), 404
+    if os.path.exists(DIST_DIR):
+        file_path = os.path.join(DIST_DIR, path)
+        if path and os.path.exists(file_path) and os.path.isfile(file_path):
+            return send_from_directory(DIST_DIR, path)
+        index_file = os.path.join(DIST_DIR, 'index.html')
+        if os.path.exists(index_file):
+            return send_from_directory(DIST_DIR, 'index.html')
+    return supabase_response({"status": "LifeOS API Ready", "message": "Frontend build not detected in dist/"})
+
+
+# ═══════════════════════════════════════════════════════════════
 # Initialize on Import
 # ═══════════════════════════════════════════════════════════════
 
 init_db()
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    port = int(os.environ.get('PORT', 8080))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=port, debug=debug)

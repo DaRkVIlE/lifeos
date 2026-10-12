@@ -12,22 +12,22 @@ const MiniCharacter = lazy(() => import('../realm/ui/MiniCharacter').then(m => (
 import './DesktopHeader.css';
 
 const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Today',
-  '/schedule': 'Schedule',
-  '/goals': 'Goals',
-  '/habits': 'Habits',
-  '/finances': 'Finances',
-  '/health': 'Health',
-  '/reflect': 'Reflect',
-  '/reflect/journal': 'Journal',
-  '/reflect/review': 'Review',
-  '/reflect/inbox': 'Inbox',
-  '/reflect/story': 'Story',
+  '/': 'Hoje',
+  '/schedule': 'Agenda',
+  '/goals': 'Metas',
+  '/habits': 'Hábitos',
+  '/finances': 'Finanças',
+  '/health': 'Saúde',
+  '/reflect': 'Refletir',
+  '/reflect/journal': 'Diário',
+  '/reflect/review': 'Revisão',
+  '/reflect/inbox': 'Caixa de Entrada',
+  '/reflect/story': 'Minha História',
   '/social': 'Social',
-  '/settings': 'Settings',
-  '/character': 'Character',
-  '/character/equipment': 'Equipment',
-  '/character/junction': 'Junction',
+  '/settings': 'Configurações',
+  '/character': 'Personagem',
+  '/character/equipment': 'Equipamentos',
+  '/character/junction': 'Junção',
 };
 
 function getPageTitle(pathname: string): string {

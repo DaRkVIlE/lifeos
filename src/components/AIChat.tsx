@@ -668,7 +668,7 @@ export function AIChat() {
       // Extract rateLimit from error body if present
       if (errBody?.rateLimit) setRateLimit(errBody.rateLimit);
       
-      let friendlyMsg = `Sorry, something went wrong: ${errBody?.error || rawMsg}`;
+      let friendlyMsg = `Algo deu errado: ${errBody?.error || rawMsg}`;
       const isDailyLimit = errBody?.error?.includes('Daily limit') || rawMsg.includes('Daily limit');
       const isRateLimit = isDailyLimit || rawMsg.includes('429') || rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('Rate limit') || errBody?.error?.includes('limit');
       
@@ -678,15 +678,15 @@ export function AIChat() {
           setRateLimit(rl);
           const resetMin = rl.resetIn ? Math.ceil(rl.resetIn / 60) : null;
           friendlyMsg = resetMin
-            ? `⏳ You've used all ${rl.limit} messages for today. Resets in ${resetMin} min.`
-            : `⏳ Daily message limit reached. Try again later.`;
+            ? `⏳ Você usou todas as ${rl.limit} mensagens de hoje. Redefine em ${resetMin} min.`
+            : `⏳ Limite diário de mensagens atingido. Tente novamente mais tarde.`;
         } else {
-          friendlyMsg = '⏳ AI message limit reached. Try again later.';
+          friendlyMsg = '⏳ Limite de mensagens da IA atingido. Tente novamente mais tarde.';
         }
       } else if (rawMsg.includes('401') || rawMsg.includes('token') || errBody?.error?.includes('token')) {
-        friendlyMsg = 'Session expired. Please refresh the page and log in again.';
+        friendlyMsg = 'Sessão expirada. Atualize a página e entre novamente.';
       } else if (rawMsg.includes('502') || rawMsg.includes('503')) {
-        friendlyMsg = 'AI service temporarily unavailable. Try again in a moment.';
+        friendlyMsg = 'Serviço de IA temporariamente indisponível. Tente novamente em breve.';
       }
       const errorMsg: ChatMessage = {
         id: genId(),
