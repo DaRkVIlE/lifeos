@@ -1,0 +1,51 @@
+id: lifeos-p0.3-onboarding-off
+story_ref: lifeos-p0.3-onboarding-off
+qa_date: "2026-10-17"
+qa_agent: "noesis-kairos-f10eb7f8"
+verdict: PASS
+
+summary: |
+  Lógica de desativação de tours implementada corretamente.
+  ZERO erros de lint nos arquivos modificados. Sem regressões.
+
+checks:
+  lint_changed_files:
+    status: PASS
+    note: "SpotlightTour.tsx — ZERO erros de lint nas linhas modificadas"
+
+  code_review:
+    status: PASS
+    findings:
+      - "areToursDisabled(): val === null → true (default disabled) ✅"
+      - "areToursDisabled(): val === 'true' → true ✅"
+      - "areToursDisabled(): val === 'false' → false (usuário ativou) ✅"
+      - "setToursDisabled(true): localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(ALL_TOURS)) — marca todos como completos ✅"
+      - "getCompletedTours(): se areToursDisabled() → retorna ALL_TOURS (previne qualquer tour de abrir) ✅"
+      - "SpotlightTour component: if (!autoStart || areToursDisabled()) return early ✅"
+      - "Tour manual via ?tour= query param: ainda funciona — ignora areToursDisabled() ✅"
+      - "catch block em areToursDisabled(): return true (fail-safe — prefere não incomodar) ✅"
+
+  regression_check:
+    status: PASS
+    note: |
+      markTourComplete(), syncToursFromSupabase(), resetTour(), resetTours() — 
+      todas as funções públicas mantêm comportamento original.
+      Manual triggers via startTourManually() e CustomEvent 'start-tour' não são afetados.
+
+  acceptance_criteria:
+    all_met: true
+    items:
+      - criterion: "areToursDisabled() → true quando key é null"
+        status: PASS
+      - criterion: "areToursDisabled() → true quando key é 'true'"
+        status: PASS
+      - criterion: "areToursDisabled() → false apenas quando key é 'false'"
+        status: PASS
+      - criterion: "setToursDisabled(true) marca todos tours completos"
+        status: PASS
+      - criterion: "Tours manuais via Settings/query param ainda funcionam"
+        status: PASS
+
+decision: |
+  APPROVED. P0.3 implementado corretamente. Lógica defensiva e fail-safe.
+  Nenhuma regressão. PASS sem concerns.

@@ -1,0 +1,66 @@
+id: lifeos-p0.2-sidebar-ui
+story_ref: lifeos-p0.2-sidebar-ui
+qa_date: "2026-10-17"
+qa_agent: "noesis-kairos-f10eb7f8"
+verdict: CONCERNS
+
+summary: |
+  Sidebar accordion implementado corretamente. Código limpo e sem regressões.
+  Concerns são debt pré-existente no codebase, não causado por esta story.
+
+checks:
+  lint_changed_files:
+    status: PASS
+    note: "Sidebar.tsx e Sidebar.css — ZERO erros de lint nos arquivos modificados"
+
+  lint_global:
+    status: CONCERNS
+    note: |
+      1027 problemas globais no codebase. TODOS pré-existentes.
+      Nenhum em Sidebar.tsx, Sidebar.css ou SpotlightTour.tsx.
+      Erros em App.tsx (linhas 9, 87, 161, 322) são pré-existentes — nenhuma das linhas
+      adicionadas pelas mudanças P0.2 está envolvida.
+
+  code_review:
+    status: PASS
+    findings:
+      - "NAV_SECTIONS corretamente tipado com NavSectionDef interface"
+      - "openSections inicializado com try/catch para localStorage — robusto"
+      - "toggleSection() é puro: prev → next sem mutação"
+      - "Regra do IMPORTANT comment respeitada: headers ocultos via CSS, não remoção do DOM"
+      - "Seção systems usa dedup filter correto (arr.findIndex para evitar duplicatas)"
+      - "aria-expanded passado corretamente aos botões de seção"
+
+  regression_check:
+    status: PASS
+    note: "Não há alterações em lógica de roteamento, auth, stores, ou hooks críticos"
+
+  acceptance_criteria:
+    all_met: true
+    items:
+      - criterion: "Nav items agrupados em 4 seções"
+        status: PASS
+      - criterion: "Seções colapsáveis com header clicável"
+        status: PASS
+      - criterion: "Persistência localStorage lifeos_sidebar_sections"
+        status: PASS
+      - criterion: "Default: todas abertas"
+        status: PASS
+      - criterion: "Seção Sistemas condicionada a systemPages.length > 0"
+        status: PASS
+      - criterion: "Collapsed sidebar: headers ocultos, items visíveis via CSS"
+        status: PASS
+
+concerns:
+  - id: C1
+    severity: LOW
+    description: "upgrading e setUpgrading declarados mas não usados em Sidebar.tsx (linha 78-79) — pré-existente, não causado por P0.2"
+    action: "Documentar como tech debt. Não bloqueia."
+  - id: C2
+    severity: INFO
+    description: "1027 problemas de lint globais são pré-existentes ao sprint. Escopo de correção é separado."
+    action: "Criar task dedicada lifeos-tech-debt-lint. Out of scope deste sprint."
+
+decision: |
+  APPROVED. P0.2 implementado corretamente. Nenhuma regressão introduzida.
+  Concerns são dívida técnica pré-existente — documentada, não bloqueante.

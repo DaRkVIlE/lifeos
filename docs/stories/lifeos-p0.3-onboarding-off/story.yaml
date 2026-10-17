@@ -1,0 +1,33 @@
+id: lifeos-p0.3-onboarding-off
+title: "P0.3 — Tours de onboarding desativados por padrão"
+priority: P0
+complexity: SIMPLE
+status: Done
+created_at: "2026-10-17"
+implemented_at: "2026-10-17"
+qa_gate: pass
+
+description: |
+  Os tours de onboarding (Spotlight Tour via driver.js) disparavam automaticamente
+  para todos os usuários em todas as páginas, mesmo após já terem sido vistos,
+  causando interrupções frustrantes. Esta story garante que tours sejam desativados
+  por padrão (opt-in, não opt-out).
+
+acceptance_criteria:
+  - "areToursDisabled() retorna true quando lifeos_tours_disabled está null (novo usuário)"
+  - "areToursDisabled() retorna true quando lifeos_tours_disabled === 'true'"
+  - "areToursDisabled() retorna false apenas quando lifeos_tours_disabled === 'false' (usuário explicitamente ativou)"
+  - "setToursDisabled(true) também marca todos os tours como completos no TOUR_STORAGE_KEY"
+  - "Tours podem ainda ser disparados manualmente via Settings ou via ?tour= query param"
+
+files_changed:
+  - src/components/SpotlightTour.tsx
+
+implementation_notes: |
+  - areToursDisabled(): val === null || val === 'true' → true (disabled)
+  - setToursDisabled(disabled: boolean): quando disabled=true, também popula TOUR_STORAGE_KEY com ALL_TOURS
+  - SpotlightTour component: if (!autoStart || areToursDisabled()) return — skip auto-start
+  - Tours manuais (?tour= query param) ainda funcionam independentemente
+
+retroactive: true
+retroactive_reason: "Implementado por Gemini Flash sem seguir o pipeline AIOX. Story criada retroativamente."

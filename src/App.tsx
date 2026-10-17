@@ -315,6 +315,16 @@ function AppRoutes() {
   } else {
     // 3. Local mode: wait for profile to load
     if (profileLoading) return showSpinner;
+    if (profile && !profile.onboarding_complete) {
+      profile.onboarding_complete = true;
+      try {
+        localStorage.setItem('lifeos_tours_disabled', 'true');
+      } catch {}
+      supabase.from('user_profiles')
+        .update({ onboarding_complete: true })
+        .eq('user_id', user?.id || 'local-user-001')
+        .then(() => refreshProfile());
+    }
   }
 
   return (

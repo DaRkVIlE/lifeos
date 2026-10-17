@@ -28,6 +28,31 @@ async function getDriver() {
 export type TourId = 'dashboard' | 'health' | 'finance' | 'goals' | 'habits' | 'schedule' | 'junction' | 'gamification' | 'realm-slides' | 'junction-slides';
 
 const TOUR_STORAGE_KEY = 'lifeos_completed_tours';
+export const TOURS_DISABLED_KEY = 'lifeos_tours_disabled';
+
+const ALL_TOURS: TourId[] = [
+  'dashboard', 'health', 'finance', 'goals', 'habits',
+  'schedule', 'junction', 'gamification', 'realm-slides', 'junction-slides'
+];
+
+export function areToursDisabled(): boolean {
+  try {
+    const val = localStorage.getItem(TOURS_DISABLED_KEY);
+    // Default to true (disabled permanently) unless explicitly enabled
+    return val === null || val === 'true';
+  } catch {
+    return true;
+  }
+}
+
+export function setToursDisabled(disabled: boolean) {
+  try {
+    localStorage.setItem(TOURS_DISABLED_KEY, String(disabled));
+    if (disabled) {
+      localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(ALL_TOURS));
+    }
+  } catch { /* private mode */ }
+}
 
 // Sync-ready flag — blocks tour auto-start until Supabase sync completes
 let _toursReady = false;
@@ -38,10 +63,13 @@ export function isToursReady(): boolean { return _toursReady; }
 export function waitForToursReady(): Promise<void> { return _toursReadyPromise; }
 
 function getCompletedTours(): TourId[] {
+  if (areToursDisabled()) {
+    return ALL_TOURS;
+  }
   try {
     return JSON.parse(localStorage.getItem(TOUR_STORAGE_KEY) || '[]');
   } catch {
-    return [];
+    return ALL_TOURS;
   }
 }
 
@@ -713,7 +741,7 @@ export function SpotlightTour({ tourId, autoStart = true, delay = 1000, onTourCo
       return () => clearTimeout(timer);
     }
 
-    if (!autoStart) return;
+    if (!autoStart || areToursDisabled()) return;
 
     // Wait for Supabase tour sync before deciding to show any tour.
     // This prevents tours from pestering users who already completed them

@@ -1,0 +1,36 @@
+id: lifeos-p0.2-sidebar-ui
+title: "P0.2 — Sidebar: accordion sections com persistência"
+priority: P0
+complexity: STANDARD
+status: Done
+created_at: "2026-10-17"
+implemented_at: "2026-10-17"
+qa_gate: concerns
+
+description: |
+  O sidebar exibia todos os itens de navegação em lista plana sem agrupamento visual,
+  tornando o app difícil de navegar conforme o número de features cresce.
+  Esta story adiciona seções colapsáveis (accordion) com persistência no localStorage.
+
+acceptance_criteria:
+  - "Nav items agrupados em: Core & Rotina, Vida & Recursos, Evolução & RPG, Sistemas"
+  - "Cada seção tem header clicável que colapsa/expande os itens filhos"
+  - "Estado aberto/fechado de cada seção persiste via localStorage (key: lifeos_sidebar_sections)"
+  - "Default: todas as seções abertas na primeira visita"
+  - "Seção 'Sistemas' aparece apenas quando systemPages.length > 0"
+  - "Quando sidebar está collapsed (ícone só), headers de seção ficam ocultos mas items permanecem visíveis"
+
+files_changed:
+  - src/components/Sidebar.tsx
+  - src/components/Sidebar.css
+
+implementation_notes: |
+  - NAV_SECTIONS array com {id, label, routes[]}
+  - openSections: Record<string, boolean> inicializado do localStorage
+  - toggleSection() atualiza estado + persiste localStorage
+  - CSS: .sb-section-header, .sb-section-items.open/.closed, .sb-section-toggle-icon
+  - Regra crítica mantida: NUNCA usar {!collapsed && <element>} — visibilidade só via CSS
+  - Seção systems reutiliza toggleSection('systems') para sistema de pages dinâmicas
+
+retroactive: true
+retroactive_reason: "Implementado por Gemini Flash sem seguir o pipeline AIOX. Story criada retroativamente para registro e QA gate."

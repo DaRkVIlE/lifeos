@@ -18,7 +18,7 @@ import './GamificationModal.css';
 const GamificationModal = lazy(() => import('./GamificationModal').then(m => ({ default: m.GamificationModal })));
 import {
   LayoutDashboard, Calendar, Target, Flame, Wallet, Heart,
-  BookOpen, ChevronLeft, ChevronRight,
+  BookOpen, ChevronLeft, ChevronRight, ChevronDown,
   LogOut, Zap, Settings, BarChart3, MessageSquarePlus, Crown, Users,
   CreditCard, Loader2, Sparkles, Swords, Inbox, GraduationCap, Music, Package,
   type LucideIcon,
@@ -39,6 +39,30 @@ const NAV_ITEMS = getNavFeatures('sidebar').map(f => ({
   label: f.name,
   color: f.color,
 }));
+
+interface NavSectionDef {
+  id: string;
+  label: string;
+  routes: string[];
+}
+
+const NAV_SECTIONS: NavSectionDef[] = [
+  {
+    id: 'core',
+    label: 'Core & Rotina',
+    routes: ['/', '/schedule', '/goals', '/habits'],
+  },
+  {
+    id: 'life',
+    label: 'Vida & Recursos',
+    routes: ['/finances', '/health', '/replicator', '/social'],
+  },
+  {
+    id: 'growth',
+    label: 'Evolução & RPG',
+    routes: ['/character', '/reflect', '/academy', '/lessons'],
+  },
+];
 
 interface SidebarProps {
   expanded?: boolean;
@@ -80,6 +104,24 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
     return () => clearInterval(interval);
   }, [user?.id]);
 
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('lifeos_sidebar_sections');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { core: true, life: true, growth: true, systems: true };
+  });
+
+  const toggleSection = (id: string) => {
+    setOpenSections(prev => {
+      const next = { ...prev, [id]: !(prev[id] ?? true) };
+      try {
+        localStorage.setItem('lifeos_sidebar_sections', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   /* ─────────────────────────────────────────────────────────────────
    * IMPORTANT: Never use {!collapsed && <element>} to hide sidebar
    * content. ALL elements must always be in the DOM. Visibility is
@@ -119,61 +161,89 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
 
       {/* Nav */}
       <nav className="sb-nav" aria-label="Primary navigation">
-        {NAV_ITEMS.map(item => {
-          const Icon = item.icon;
-          const active = location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to));
+        {NAV_SECTIONS.map(section => {
+          const items = NAV_ITEMS.filter(item => section.routes.includes(item.to));
+          const isOpen = openSections[section.id] ?? true;
+
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={`sb-link ${active ? 'active' : ''}`}
-              title={item.label}
-            >
-              <div className="sb-icon-wrap" style={{ '--link-color': item.color } as React.CSSProperties}>
-                <Icon size={18} />
-              </div>
-              <span className="sb-label">{item.label}</span>
-              {item.to === '/social' && socialUnread > 0 && (
-                <span className="sb-badge" style={{
-                  marginLeft: 'auto', background: '#00D4FF', color: '#0A2540',
-                  borderRadius: 20, padding: '1px 7px', fontSize: 10, fontWeight: 700,
-                }}>
-                  {socialUnread}
-                </span>
+            <div key={section.id} className="sb-section">
+              {!collapsed && (
+                <button
+                  type="button"
+                  className="sb-section-header"
+                  onClick={() => toggleSection(section.id)}
+                  aria-expanded={isOpen}
+                >
+                  <span>{section.label}</span>
+                  <ChevronDown size={14} className={`sb-section-toggle-icon ${isOpen ? 'open' : 'closed'}`} />
+                </button>
               )}
-            </NavLink>
+              <div className={`sb-section-items ${!collapsed && !isOpen ? 'closed' : 'open'}`}>
+                {items.map(item => {
+                  const Icon = item.icon;
+                  const active = location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to));
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={`sb-link ${active ? 'active' : ''}`}
+                      title={item.label}
+                    >
+                      <div className="sb-icon-wrap" style={{ '--link-color': item.color } as React.CSSProperties}>
+                        <Icon size={18} />
+                      </div>
+                      <span className="sb-label">{item.label}</span>
+                      {item.to === '/social' && socialUnread > 0 && (
+                        <span className="sb-badge" style={{
+                          marginLeft: 'auto', background: '#00D4FF', color: '#0A2540',
+                          borderRadius: 20, padding: '1px 7px', fontSize: 10, fontWeight: 700,
+                        }}>
+                          {socialUnread}
+                        </span>
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
 
         {/* Connected system pages */}
         {systemPages.length > 0 && (
-          <>
-            <div className="sb-section-label" style={{
-              padding: '8px 16px 4px', fontSize: 10, fontWeight: 600,
-              color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase',
-              letterSpacing: '0.1em', marginTop: 4,
-            }}>
-              Systems
+          <div className="sb-section">
+            {!collapsed && (
+              <button
+                type="button"
+                className="sb-section-header"
+                onClick={() => toggleSection('systems')}
+                aria-expanded={openSections['systems'] ?? true}
+              >
+                <span>Sistemas</span>
+                <ChevronDown size={14} className={`sb-section-toggle-icon ${(openSections['systems'] ?? true) ? 'open' : 'closed'}`} />
+              </button>
+            )}
+            <div className={`sb-section-items ${!collapsed && !(openSections['systems'] ?? true) ? 'closed' : 'open'}`}>
+              {systemPages
+                .filter((p, i, arr) => arr.findIndex(x => x.path === p.path) === i)
+                .map(page => {
+                  const active = location.pathname === page.path || location.pathname.startsWith(page.path + '/');
+                  return (
+                    <NavLink
+                      key={page.path}
+                      to={page.path}
+                      className={`sb-link ${active ? 'active' : ''}`}
+                      title={page.label}
+                    >
+                      <div className="sb-icon-wrap" style={{ '--link-color': '#00D4FF' } as React.CSSProperties}>
+                        <span style={{ fontSize: 16, lineHeight: 1 }}>{page.icon}</span>
+                      </div>
+                      <span className="sb-label">{page.label}</span>
+                    </NavLink>
+                  );
+                })}
             </div>
-            {systemPages
-              .filter((p, i, arr) => arr.findIndex(x => x.path === p.path) === i)
-              .map(page => {
-                const active = location.pathname === page.path || location.pathname.startsWith(page.path + '/');
-                return (
-                  <NavLink
-                    key={page.path}
-                    to={page.path}
-                    className={`sb-link ${active ? 'active' : ''}`}
-                    title={page.label}
-                  >
-                    <div className="sb-icon-wrap" style={{ '--link-color': '#00D4FF' } as React.CSSProperties}>
-                      <span style={{ fontSize: 16, lineHeight: 1 }}>{page.icon}</span>
-                    </div>
-                    <span className="sb-label">{page.label}</span>
-                  </NavLink>
-                );
-              })}
-          </>
+          </div>
         )}
       </nav>
 
