@@ -27,4 +27,7 @@ COPY --from=frontend-builder /build/dist ./dist
 
 EXPOSE 8080
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-8080}/api/health-check || exit 1
+
 CMD ["sh", "-c", "gunicorn -w 2 -b 0.0.0.0:${PORT:-8080} --access-logfile - --error-logfile - backend.app:app"]
