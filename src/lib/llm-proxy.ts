@@ -41,9 +41,10 @@ async function _callLLMProxyOnce(
   input: string | { role: string; content: string }[],
   options: LLMProxyOptions = {},
 ): Promise<LLMProxyResponse> {
+  const isLocalMode = import.meta.env.VITE_USE_LOCAL_API === 'true';
   const {
-    provider = 'openrouter',
-    model,
+    provider = isLocalMode ? 'groq' : 'openrouter',
+    model = isLocalMode ? 'llama-3.3-70b-versatile' : undefined,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     skipAuth = false,
     format = 'text',

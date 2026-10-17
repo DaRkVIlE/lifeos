@@ -1,0 +1,31 @@
+id: lifeos-p0.1-llm-proxy
+title: "P0.1 — Correção do proxy LLM, Intent Engine e cascata de fallback"
+priority: P0
+complexity: STANDARD
+status: Done
+created_at: "2026-10-17"
+implemented_at: "2026-10-17"
+qa_gate: pass
+
+description: |
+  O proxy LLM e o intent engine estavam quebrados devido ao uso de modelos inexistentes
+  no provedor Groq (openai/gpt-oss-120b hallucinado) e à ausência de uma cascata de
+  fallback funcional. Esta story restaura os modelos reais da Groq (llama-3.3-70b-versatile,
+  llama-3.1-8b-instant) com fallback em cascata para Gemini 2.0 Flash, OpenRouter e OpenAI.
+
+acceptance_criteria:
+  - "Groq configurado com modelos válidos: llama-3.3-70b-versatile e llama-3.1-8b-instant"
+  - "Default local no frontend (llm-proxy.ts e intent-engine.ts) aponta para llama-3.3-70b-versatile"
+  - "Migração limpa automaticamente chaves salvas com gpt-oss do localStorage"
+  - "Backend app.py implementa cascata de fallback: OpenRouter -> Groq -> Gemini -> OpenAI"
+  - "Proxy responde HTTP 200/JSON com schema compatível {content, provider, model}"
+
+files_changed:
+  - src/lib/llm-proxy.ts
+  - src/lib/intent-engine.ts
+  - backend/app.py
+
+implementation_notes: |
+  - Removido completamente 'openai/gpt-oss-120b' e referências falsas de Groq
+  - intent-engine.ts getAISettings() migra valores corrompidos do localStorage para llama-3.3-70b-versatile
+  - backend app.py _execute_llm_call tenta Groq; se falhar ou status!=200, tenta fallback interno e depois Gemini 2.0 Flash

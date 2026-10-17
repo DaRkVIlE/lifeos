@@ -1,0 +1,35 @@
+id: lifeos-p0.5-profile-persistence
+story_ref: lifeos-p0.5-profile-persistence
+qa_date: "2026-10-17"
+qa_agent: "noesis-kairos-f10eb7f8"
+verdict: PASS
+
+summary: |
+  Persistência de perfil validada com sucesso em SQLite e store Zustand.
+  display_name e full_name agora operam sincronizados tanto no frontend quanto no backend.
+
+checks:
+  database_audit:
+    status: PASS
+    note: "Consulta direta ao SQLite confirmou user_id 'local-user-001' com full_name e display_name = 'Gabriel Lima (GABE)'"
+
+  code_review:
+    status: PASS
+    findings:
+      - "backend/app.py: _migrate_tables() popula display_name a partir de full_name ✅"
+      - "backend/app.py: get_profile() e update_profile() garantem espelhamento bidirecional ✅"
+      - "useUserStore.ts: fetchProfile() inclui full_name no select e mapeia display_name corretamente ✅"
+      - "Settings.tsx: salva payload com display_name e full_name e dispara re-fetch imediato da store ✅"
+
+  acceptance_criteria:
+    all_met: true
+    items:
+      - criterion: "Persistência bidirecional display_name e full_name"
+        status: PASS
+      - criterion: "Fallback automático em SQLite local"
+        status: PASS
+      - criterion: "Atualização reativa de stores e componentes de UI"
+        status: PASS
+
+decision: |
+  APPROVED. P0.5 concluído com sucesso. Nenhuma regressão detectada.

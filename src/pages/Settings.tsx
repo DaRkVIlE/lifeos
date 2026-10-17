@@ -109,7 +109,7 @@ export function Settings() {
     const { data } = await supabase.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle();
     if (data) {
       setProfile(data);
-      setDisplayName(data.display_name || '');
+      setDisplayName(data.display_name || data.full_name || '');
       setOccupation(data.occupation || '');
       setPrimaryFocus(data.primary_focus || '');
     }
@@ -123,6 +123,7 @@ export function Settings() {
     setSaving(true); setError(''); setSaved(false);
     const payload = {
       display_name: displayName.trim(),
+      full_name: displayName.trim(),
       occupation: occupation.trim(),
       primary_focus: primaryFocus.trim(),
       updated_at: new Date().toISOString(),
@@ -138,7 +139,14 @@ export function Settings() {
       });
       err = res.error;
     }
-    if (err) { setError(err.message); } else { setSaved(true); setTimeout(() => setSaved(false), 3000); fetchProfile(); }
+    if (err) {
+      setError(err.message);
+    } else {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+      await fetchProfile();
+      useUserStore.getState().fetchProfile().catch(() => {});
+    }
     setSaving(false);
   };
 

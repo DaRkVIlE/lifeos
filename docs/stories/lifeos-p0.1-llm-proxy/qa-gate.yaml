@@ -1,0 +1,35 @@
+id: lifeos-p0.1-llm-proxy
+story_ref: lifeos-p0.1-llm-proxy
+qa_date: "2026-10-17"
+qa_agent: "noesis-kairos-f10eb7f8"
+verdict: PASS
+
+summary: |
+  Correção de provedores e modelos de IA validada com sucesso.
+  Modelos inexistentes eliminados; modelos reais da Groq e fallback ativo.
+
+checks:
+  model_validation:
+    status: PASS
+    note: "llama-3.3-70b-versatile verificado como modelo oficial da Groq Cloud. Hallucinações gpt-oss eliminadas."
+
+  fallback_cascade:
+    status: PASS
+    note: "Cascata em backend/app.py (_execute_llm_call) configurada com: OpenRouter -> Groq -> Gemini 2.0 Flash -> OpenAI"
+
+  frontend_integration:
+    status: PASS
+    note: "llm-proxy.ts e intent-engine.ts sincronizados com defaults corretos e migração de localStorage ativa"
+
+  acceptance_criteria:
+    all_met: true
+    items:
+      - criterion: "Modelos válidos Groq"
+        status: PASS
+      - criterion: "Defaults e migrações no frontend"
+        status: PASS
+      - criterion: "Cascata resiliente no backend"
+        status: PASS
+
+decision: |
+  APPROVED. P0.1 corrigido e funcional.

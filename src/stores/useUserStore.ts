@@ -510,7 +510,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select('user_id,display_name,occupation,primary_focus,onboarding_complete,preferences')
+        .select('user_id,display_name,full_name,occupation,primary_focus,onboarding_complete,preferences')
         .eq('user_id', user.id)
         .abortSignal(controller.signal)
         .maybeSingle();
@@ -542,13 +542,18 @@ export const useUserStore = create<UserState>((set, get) => ({
           // Re-fetch the newly created profile
           const { data: newData } = await supabase
             .from('user_profiles')
-            .select('user_id,display_name,occupation,primary_focus,onboarding_complete,preferences')
+            .select('user_id,display_name,full_name,occupation,primary_focus,onboarding_complete,preferences')
             .eq('user_id', user.id)
             .maybeSingle();
 
-          const newProfile = newData as UserProfile | null;
+          const rawCreated = newData as any;
+          const newProfile = rawCreated ? {
+            ...rawCreated,
+            display_name: rawCreated.display_name || rawCreated.full_name || null,
+          } as UserProfile : null;
           const firstName = newProfile?.display_name
-            || user.user_metadata?.full_name?.split(' ')[0]
+            ? newProfile.display_name.split(' ')[0]
+            : user.user_metadata?.full_name?.split(' ')[0]
             || 'Commander';
 
           cacheProfile(newProfile);
@@ -560,9 +565,14 @@ export const useUserStore = create<UserState>((set, get) => ({
         return;
       }
 
-      const profile = data as UserProfile;
+      const rawData = data as any;
+      const profile: UserProfile = {
+        ...rawData,
+        display_name: rawData.display_name || rawData.full_name || null,
+      };
       const firstName = profile?.display_name
-        || user.user_metadata?.full_name?.split(' ')[0]
+        ? profile.display_name.split(' ')[0]
+        : user.user_metadata?.full_name?.split(' ')[0]
         || 'Commander';
 
       // Guard: never revert onboarding_complete from true → false.

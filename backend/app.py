@@ -114,6 +114,9 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     user_id TEXT PRIMARY KEY,
     email TEXT,
     full_name TEXT,
+    display_name TEXT,
+    occupation TEXT,
+    primary_focus TEXT,
     avatar_url TEXT,
     timezone TEXT DEFAULT 'Australia/Melbourne',
     subscription_tier TEXT DEFAULT 'free',
@@ -898,6 +901,24 @@ CREATE TABLE IF NOT EXISTS agent_actions (
 );
 """
 
+def _migrate_tables(db):
+    """Ensure all required columns exist in user_profiles and critical tables."""
+    try:
+        cur = db.execute("PRAGMA table_info(user_profiles)")
+        cols = {row['name'] if isinstance(row, sqlite3.Row) else row[1] for row in cur.fetchall()}
+        for col_name, col_type in [
+            ('display_name', 'TEXT'),
+            ('occupation', 'TEXT'),
+            ('primary_focus', 'TEXT'),
+        ]:
+            if col_name not in cols:
+                db.execute(f"ALTER TABLE user_profiles ADD COLUMN {col_name} {col_type}")
+                print(f"[LifeOS Migration] Added column {col_name} to user_profiles")
+        db.execute("UPDATE user_profiles SET display_name = full_name WHERE (display_name IS NULL OR display_name = '') AND full_name IS NOT NULL")
+        db.commit()
+    except Exception as e:
+        print(f"[LifeOS Migration Warning] {e}")
+
 def init_db():
     """Create all tables and seed default user or copy pre-seeded database."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -906,10 +927,10 @@ def init_db():
         import shutil
         shutil.copy2(template_db, DB_PATH)
         print(f"[LifeOS] Copied pre-seeded template from {template_db} to {DB_PATH}")
-        return
 
     db = sqlite3.connect(DB_PATH)
     db.executescript(SCHEMA_SQL)
+    _migrate_tables(db)
     # Ensure default user exists
     db.execute(
         "INSERT OR IGNORE INTO users (id, email, display_name) VALUES (?, NULL, ?)",
@@ -1195,6 +1216,17 @@ def unified_crud(table_name, item_id=None):
         body.pop('created_at', None)
         body.setdefault('updated_at', now_iso())
         _serialize_json_fields(body)
+
+        if table_name == 'user_profiles':
+            _migrate_tables(db)
+            if 'display_name' in body and not body.get('full_name'):
+                body['full_name'] = body['display_name']
+
+        # Filter only existing columns in table to avoid OperationalError
+        cur = db.execute(f'PRAGMA table_info({table_name})')
+        cols = {row['name'] if isinstance(row, sqlite3.Row) else row[1] for row in cur.fetchall()}
+        body = {k: v for k, v in body.items() if k in cols}
+
         if item_id:
             body.pop(pk, None)
             if body:
@@ -1395,11 +1427,15 @@ def get_user():
 def get_profile():
     db = get_db()
     row = db.execute("SELECT * FROM user_profiles WHERE user_id = ?", (DEFAULT_USER_ID,)).fetchone()
-    return supabase_response(data=row_to_dict(row))
+    d = row_to_dict(row)
+    if d and not d.get('display_name') and d.get('full_name'):
+        d['display_name'] = d['full_name']
+    return supabase_response(data=d)
 
 @app.route('/api/user/profile', methods=['PUT', 'PATCH'])
 def update_profile():
     db = get_db()
+    _migrate_tables(db)
     body = request.get_json(force=True, silent=True) or {}
     body.pop('user_id', None)
     body.setdefault('updated_at', now_iso())
@@ -1407,13 +1443,26 @@ def update_profile():
     if 'preferences' in body and not isinstance(body['preferences'], str):
         body['preferences'] = json.dumps(body['preferences'])
 
-    sets = ", ".join(f"{k} = ?" for k in body.keys())
-    vals = list(body.values()) + [DEFAULT_USER_ID]
-    db.execute(f"UPDATE user_profiles SET {sets} WHERE user_id = ?", vals)
-    db.commit()
+    if 'display_name' in body and body['display_name']:
+        body['full_name'] = body['display_name']
+    elif 'full_name' in body and body['full_name']:
+        body['display_name'] = body['full_name']
+
+    cur = db.execute("PRAGMA table_info(user_profiles)")
+    cols = {row['name'] if isinstance(row, sqlite3.Row) else row[1] for row in cur.fetchall()}
+    valid_body = {k: v for k, v in body.items() if k in cols}
+
+    if valid_body:
+        sets = ", ".join(f'"{k}" = ?' for k in valid_body.keys())
+        vals = list(valid_body.values()) + [DEFAULT_USER_ID]
+        db.execute(f'UPDATE user_profiles SET {sets} WHERE user_id = ?', vals)
+        db.commit()
 
     row = db.execute("SELECT * FROM user_profiles WHERE user_id = ?", (DEFAULT_USER_ID,)).fetchone()
-    return supabase_response(data=row_to_dict(row))
+    d = row_to_dict(row)
+    if d and not d.get('display_name') and d.get('full_name'):
+        d['display_name'] = d['full_name']
+    return supabase_response(data=d)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1461,81 +1510,17 @@ def finance_summary():
 # AI Chat — Proxy to SentientTeddy Bridge
 # ═══════════════════════════════════════════════════════════════
 
-@app.route('/api/ai/chat', methods=['POST'])
-def ai_chat():
-    """Proxy chat to local AI bridge (SentientTeddy at localhost:11435)."""
-    body = request.get_json(force=True, silent=True) or {}
-    message = body.get('message', '')
-    context = body.get('context', {})
-    history = body.get('history', [])
-
-    # Save user message
-    db = get_db()
-    user_msg_id = new_id()
-    db.execute(
-        "INSERT INTO chat_messages (id, user_id, role, content) VALUES (?, ?, 'user', ?)",
-        (user_msg_id, DEFAULT_USER_ID, message)
-    )
-
-    # Try to call AI bridge
-    try:
-        resp = http_requests.post(
-            f"{AI_BRIDGE_URL}/v1/chat/completions",
-            json={
-                "model": "sentient-teddy",
-                "messages": [
-                    *[{"role": m.get("role", "user"), "content": m.get("content", "")} for m in history[-10:]],
-                    {"role": "user", "content": message}
-                ],
-                "stream": False,
-            },
-            timeout=30
-        )
-        if resp.ok:
-            data = resp.json()
-            reply = data.get('choices', [{}])[0].get('message', {}).get('content', 'No response')
-        else:
-            reply = f"AI bridge returned {resp.status_code}: {resp.text[:200]}"
-    except http_requests.ConnectionError:
-        reply = "AI bridge not available. Start it with: python sentient_teddy_bridge.py"
-    except Exception as e:
-        reply = f"AI error: {str(e)}"
-
-    # Save assistant reply
-    assistant_msg_id = new_id()
-    db.execute(
-        "INSERT INTO chat_messages (id, user_id, role, content) VALUES (?, ?, 'assistant', ?)",
-        (assistant_msg_id, DEFAULT_USER_ID, reply)
-    )
-    db.commit()
-
-
 # ═══════════════════════════════════════════════════════════════
-# LLM Proxy Handler (Handles /api/llm-proxy.php, /api/intent-proxy.php)
+# AI Chat & LLM Proxy Handler (Shared Multi-Provider Engine)
 # ═══════════════════════════════════════════════════════════════
 
-@app.route('/api/llm-proxy.php', methods=['POST'])
-@app.route('/api/llm-proxy', methods=['POST'])
-@app.route('/api/intent-proxy.php', methods=['POST'])
-@app.route('/api/intent-proxy', methods=['POST'])
-def llm_proxy():
-    """Proxy LLM calls from intent-engine and LifeOS AI tools to OpenRouter/Groq/Gemini/OpenAI."""
-    body = request.get_json(force=True, silent=True) or {}
-    messages = body.get('messages', [])
-    user_msg = body.get('message', '')
-    if not messages and user_msg:
-        messages = [{"role": "user", "content": user_msg}]
-
-    # Provider & API Key resolution
+def _execute_llm_call(messages, req_model=None, req_format='text'):
     openrouter_key = os.environ.get('OPENROUTER_API_KEY')
     groq_key = os.environ.get('GROQ_API_KEY')
     gemini_key = os.environ.get('GEMINI_API_KEY')
     openai_key = os.environ.get('OPENAI_API_KEY')
 
-    req_model = body.get('model') or 'google/gemini-2.0-flash-001'
-    req_format = body.get('format', 'text')
-
-    # 1. OpenRouter (Multi-model default)
+    # 1. OpenRouter
     if openrouter_key:
         api_url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {
@@ -1544,10 +1529,7 @@ def llm_proxy():
             "HTTP-Referer": "https://app.runlifeos.com",
             "X-Title": "LifeOS"
         }
-        payload = {
-            "model": req_model,
-            "messages": messages
-        }
+        payload = {"model": req_model or "google/gemini-2.0-flash-001", "messages": messages}
         if req_format == 'json':
             payload["response_format"] = {"type": "json_object"}
         try:
@@ -1555,59 +1537,46 @@ def llm_proxy():
             if resp.ok:
                 data = resp.json()
                 content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                return jsonify({
-                    "content": content,
-                    "provider": "openrouter",
-                    "model": req_model,
-                    "usage": data.get('usage', {})
-                })
-            else:
-                return jsonify({"error": f"OpenRouter error ({resp.status_code}): {resp.text}"}), resp.status_code
-        except Exception as e:
-            return jsonify({"error": f"OpenRouter call failed: {str(e)}"}), 500
+                return {"content": content, "provider": "openrouter", "model": payload["model"], "usage": data.get('usage', {})}
+        except Exception:
+            pass
 
-    # 2. Groq (Ultra-fast)
-    elif groq_key:
+    # 2. Groq (Ultra-fast: llama-3.3-70b-versatile, llama-3.1-8b-instant)
+    if groq_key:
         api_url = "https://api.groq.com/openai/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {groq_key}",
             "Content-Type": "application/json"
         }
-        groq_model = os.environ.get('GROQ_MODEL') or "openai/gpt-oss-120b"
-        payload = {
-            "model": groq_model,
-            "messages": messages
-        }
+        valid_groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
+        groq_model = req_model or os.environ.get('GROQ_MODEL') or "llama-3.3-70b-versatile"
+        if groq_model not in valid_groq_models:
+            groq_model = "llama-3.3-70b-versatile"
+        payload = {"model": groq_model, "messages": messages}
         if req_format == 'json':
             payload["response_format"] = {"type": "json_object"}
         try:
             resp = http_requests.post(api_url, headers=headers, json=payload, timeout=45)
+            if not resp.ok:
+                for fallback in valid_groq_models:
+                    if fallback != groq_model:
+                        payload["model"] = fallback
+                        resp = http_requests.post(api_url, headers=headers, json=payload, timeout=45)
+                        if resp.ok:
+                            break
             if resp.ok:
                 data = resp.json()
                 content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                return jsonify({
-                    "content": content,
-                    "provider": "groq",
-                    "model": groq_model,
-                    "usage": data.get('usage', {})
-                })
-            else:
-                return jsonify({"error": f"Groq error ({resp.status_code}): {resp.text}"}), resp.status_code
-        except Exception as e:
-            return jsonify({"error": f"Groq call failed: {str(e)}"}), 500
+                return {"content": content, "provider": "groq", "model": payload["model"], "usage": data.get('usage', {})}
+        except Exception:
+            pass
 
     # 3. Gemini (Google AI Studio)
-    elif gemini_key:
+    if gemini_key:
         api_url = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {gemini_key}",
-            "Content-Type": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {gemini_key}", "Content-Type": "application/json"}
         gemini_model = "gemini-2.0-flash"
-        payload = {
-            "model": gemini_model,
-            "messages": messages
-        }
+        payload = {"model": gemini_model, "messages": messages}
         if req_format == 'json':
             payload["response_format"] = {"type": "json_object"}
         try:
@@ -1615,28 +1584,15 @@ def llm_proxy():
             if resp.ok:
                 data = resp.json()
                 content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                return jsonify({
-                    "content": content,
-                    "provider": "gemini",
-                    "model": gemini_model,
-                    "usage": data.get('usage', {})
-                })
-            else:
-                return jsonify({"error": f"Gemini error ({resp.status_code}): {resp.text}"}), resp.status_code
-        except Exception as e:
-            return jsonify({"error": f"Gemini call failed: {str(e)}"}), 500
+                return {"content": content, "provider": "gemini", "model": gemini_model, "usage": data.get('usage', {})}
+        except Exception:
+            pass
 
     # 4. OpenAI
-    elif openai_key:
+    if openai_key:
         api_url = "https://api.openai.com/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {openai_key}",
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "model": "gpt-4o-mini",
-            "messages": messages
-        }
+        headers = {"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"}
+        payload = {"model": "gpt-4o-mini", "messages": messages}
         if req_format == 'json':
             payload["response_format"] = {"type": "json_object"}
         try:
@@ -1644,21 +1600,64 @@ def llm_proxy():
             if resp.ok:
                 data = resp.json()
                 content = data.get('choices', [{}])[0].get('message', {}).get('content', '')
-                return jsonify({
-                    "content": content,
-                    "provider": "openai",
-                    "model": "gpt-4o-mini",
-                    "usage": data.get('usage', {})
-                })
-            else:
-                return jsonify({"error": f"OpenAI error ({resp.status_code}): {resp.text}"}), resp.status_code
-        except Exception as e:
-            return jsonify({"error": f"OpenAI call failed: {str(e)}"}), 500
+                return {"content": content, "provider": "openai", "model": "gpt-4o-mini", "usage": data.get('usage', {})}
+        except Exception:
+            pass
 
-    # Fallback when no keys configured
-    return jsonify({
-        "error": "Nenhuma chave de IA configurada. Defina OPENROUTER_API_KEY, GROQ_API_KEY, GEMINI_API_KEY ou OPENAI_API_KEY no arquivo .env ou nas variáveis do Railway."
-    }), 503
+    return {"error": "Nenhum provedor de IA respondeu com sucesso. Verifique GROQ_API_KEY, GEMINI_API_KEY ou OPENROUTER_API_KEY."}
+
+@app.route('/api/ai/chat', methods=['POST'])
+def ai_chat():
+    """Proxy chat to shared AI engine with persistence in chat_messages."""
+    body = request.get_json(force=True, silent=True) or {}
+    message = body.get('message', '')
+    history = body.get('history', [])
+
+    db = get_db()
+    user_msg_id = new_id()
+    db.execute(
+        "INSERT INTO chat_messages (id, user_id, role, content) VALUES (?, ?, 'user', ?)",
+        (user_msg_id, DEFAULT_USER_ID, message)
+    )
+
+    messages = [
+        *[{"role": m.get("role", "user"), "content": m.get("content", "")} for m in history[-10:]],
+        {"role": "user", "content": message}
+    ]
+
+    res = _execute_llm_call(messages, body.get('model'), body.get('format', 'text'))
+    reply = res.get('content') or res.get('error') or 'Sem resposta do assistente.'
+
+    assistant_msg_id = new_id()
+    db.execute(
+        "INSERT INTO chat_messages (id, user_id, role, content) VALUES (?, ?, 'assistant', ?)",
+        (assistant_msg_id, DEFAULT_USER_ID, reply)
+    )
+    db.commit()
+
+    if 'error' in res:
+        return jsonify(res), 500
+    return jsonify({"reply": reply, "content": reply, "provider": res.get("provider"), "model": res.get("model")})
+
+@app.route('/api/llm-proxy.php', methods=['POST'])
+@app.route('/api/llm-proxy', methods=['POST'])
+@app.route('/api/intent-proxy.php', methods=['POST'])
+@app.route('/api/intent-proxy', methods=['POST'])
+def llm_proxy():
+    """Proxy LLM calls from intent-engine and LifeOS AI tools to active AI providers."""
+    body = request.get_json(force=True, silent=True) or {}
+    messages = body.get('messages', [])
+    user_msg = body.get('message', '')
+    if not messages and user_msg:
+        messages = [{"role": "user", "content": user_msg}]
+
+    req_model = body.get('model')
+    req_format = body.get('format', 'text')
+
+    res = _execute_llm_call(messages, req_model, req_format)
+    if 'error' in res:
+        return jsonify(res), 503
+    return jsonify(res)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1816,6 +1815,8 @@ def life_context():
 # ═══════════════════════════════════════════════════════════════
 
 @app.route('/api/health-check', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
     """API health check."""
     return jsonify({

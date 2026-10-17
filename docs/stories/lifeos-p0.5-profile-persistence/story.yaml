@@ -1,0 +1,33 @@
+id: lifeos-p0.5-profile-persistence
+title: "P0.5 — Persistência bidirecional de perfil (display_name & full_name)"
+priority: P0
+complexity: STANDARD
+status: Done
+created_at: "2026-10-17"
+implemented_at: "2026-10-17"
+qa_gate: pass
+
+description: |
+  O nome do usuário e dados de perfil (display_name, full_name, occupation, primary_focus)
+  não persistiam corretamente devido a uma divergência entre as colunas full_name e display_name
+  no SQLite local vs schema do Supabase, fazendo com que o nome aparecesse em branco ou revertesse
+  para o fallback 'Commander'.
+
+acceptance_criteria:
+  - "Edição de perfil em Settings persiste tanto display_name quanto full_name"
+  - "Ao carregar em modo local (SQLite), display_name é mapeado a partir de full_name se nulo"
+  - "useUserStore.fetchProfile() inclui full_name na query e faz fallback transparente"
+  - "Salvar em Settings aciona fetchProfile() da store para atualizar imediatamente o header/sidebar"
+  - "Migração SQLite preenche display_name retroativamente sem perda de dados"
+
+files_changed:
+  - src/pages/Settings.tsx
+  - src/stores/useUserStore.ts
+  - backend/app.py
+  - backend/lifeos.db
+
+implementation_notes: |
+  - Backend: _migrate_tables() sincroniza UPDATE user_profiles SET display_name = full_name
+  - Backend: get_profile e update_profile garantem coerência bidirecional entre display_name e full_name
+  - Frontend: Settings.tsx grava display_name e full_name em sincronia e chama useUserStore.fetchProfile()
+  - Store: useUserStore.ts seleciona full_name e usa const firstName = profile.display_name.split(' ')[0]
