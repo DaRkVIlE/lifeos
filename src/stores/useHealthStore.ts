@@ -33,11 +33,13 @@ export const useHealthStore = create<HealthState>((set, get) => ({
   isOffline: false,
 
   fetchToday: async (options?: { skipSync?: boolean }) => {
-    const { lastFetched, loading } = get();
+    const { lastFetched, loading, todayMetrics } = get();
     if (loading) return;
     if (lastFetched && Date.now() - lastFetched < STALE_MS) return;
 
-    set({ loading: true });
+    if (!todayMetrics) {
+      set({ loading: true });
+    }
 
     try {
       // Wait for initial post-login sync before reading local DB

@@ -80,11 +80,13 @@ export const useFinanceStore = create<FinanceState>((set, get) => ({
   isOffline: false,
 
   fetchAll: async (options?: { skipSync?: boolean }) => {
-    const { lastFetched, loading } = get();
+    const { lastFetched, loading, income, expenses } = get();
     if (loading) return;
     if (lastFetched && Date.now() - lastFetched < STALE_MS) return;
 
-    set({ loading: true });
+    if (income.length === 0 && expenses.length === 0) {
+      set({ loading: true });
+    }
 
     try {
       // Wait for initial post-login sync before reading local DB

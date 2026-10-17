@@ -58,11 +58,13 @@ export const useGoalsStore = create<GoalsState>((set, get) => ({
   lastFetched: null,
 
   fetchAll: async (options?: { skipSync?: boolean }) => {
-    const { lastFetched, loading } = get();
+    const { lastFetched, loading, goals } = get();
     if (loading) return;
     if (lastFetched && Date.now() - lastFetched < STALE_MS) return;
 
-    set({ loading: true });
+    if (goals.length === 0) {
+      set({ loading: true });
+    }
 
     try {
       // Wait for initial post-login sync to complete before reading local DB

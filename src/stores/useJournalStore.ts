@@ -53,11 +53,13 @@ export const useJournalStore = create<JournalState>((set, get) => ({
   lastFetched: null,
 
   fetchRecent: async (limit = 50, options?: { skipSync?: boolean }) => {
-    const { lastFetched, loading } = get();
+    const { lastFetched, loading, entries } = get();
     if (loading) return;
     if (lastFetched && Date.now() - lastFetched < STALE_MS) return;
 
-    set({ loading: true });
+    if (entries.length === 0) {
+      set({ loading: true });
+    }
 
     try {
       // ALWAYS load from local DB first

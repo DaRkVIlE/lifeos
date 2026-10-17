@@ -56,12 +56,14 @@ export const useScheduleStore = create<ScheduleState>((set, get) => ({
   isOffline: false,
 
   fetchAll: async (options?: { skipSync?: boolean }) => {
-    const { lastFetched, loading } = get();
+    const { lastFetched, loading, tasks, events } = get();
     // Skip if recently fetched or already loading
     if (loading) return;
     if (lastFetched && Date.now() - lastFetched < STALE_MS) return;
 
-    set({ loading: true });
+    if (tasks.length === 0 && events.length === 0) {
+      set({ loading: true });
+    }
 
     try {
       // Wait for initial post-login sync before reading local DB

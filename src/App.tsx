@@ -55,7 +55,7 @@ const SetupHub = lazyRetry(() => import('./pages/SetupHub').then(m => ({ default
 const HealthOnboarding = lazyRetry(() => import('./pages/HealthOnboarding').then(m => ({ default: m.HealthOnboarding })));
 const FinanceOnboarding = lazyRetry(() => import('./pages/FinanceOnboarding').then(m => ({ default: m.FinanceOnboarding })));
 const LifeOnboarding = lazyRetry(() => import('./pages/LifeOnboarding').then(m => ({ default: m.LifeOnboarding })));
-const Layout = lazyRetry(() => import('./components/Layout').then(m => ({ default: m.Layout })));
+import { Layout } from './components/Layout';
 const Dashboard = lazyRetry(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Schedule = lazyRetry(() => import('./pages/Schedule').then(m => ({ default: m.Schedule })));
 const Goals = lazyRetry(() => import('./pages/Goals').then(m => ({ default: m.Goals })));
@@ -222,7 +222,7 @@ function AppRoutes() {
         useFinanceStore.getState().invalidate();
         useGoalsStore.getState().invalidate();
         useJournalStore.getState().invalidate();
-      }, 300);
+      }, 800);
     };
     window.addEventListener('lifeos-refresh', handler);
     return () => {

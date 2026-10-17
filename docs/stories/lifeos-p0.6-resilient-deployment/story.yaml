@@ -1,0 +1,28 @@
+id: lifeos-p0.6-resilient-deployment
+title: "P0.6 — Resiliência de deploy híbrido (Railway + Supabase/SQLite)"
+priority: P0
+complexity: COMPLEX
+status: Done
+created_at: "2026-10-17"
+implemented_at: "2026-10-17"
+qa_gate: pass
+
+description: |
+  Garante que a aplicação opere de maneira estável tanto em modo nuvem (Supabase + Railway)
+  quanto em modo local (Flask + SQLite), sem que a ausência temporária de variáveis do Supabase
+  ou falha em conexões externas impeça a inicialização ou quebre a interface.
+
+acceptance_criteria:
+  - "src/lib/supabase.ts opera em modo noop defensivo quando variáveis estão ausentes sem crashar o bundle"
+  - "Dockerfile multi-stage compila o frontend e prepara o backend Flask com gunicorn"
+  - "Backend serve static dist/ para o SPA com fallback seguro para index.html"
+  - "Build de produção Vite passa com sucesso"
+
+files_changed:
+  - src/lib/supabase.ts
+  - Dockerfile
+  - backend/app.py
+
+implementation_notes: |
+  - supabase.ts detecta HAS_SUPABASE e cai em noop client seguro sem lançar exceptions não tratadas
+  - Build de frontend validado localmente com Vite 7.3.1

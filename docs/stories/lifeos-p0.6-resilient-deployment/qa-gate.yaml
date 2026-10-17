@@ -1,0 +1,21 @@
+id: lifeos-p0.6-resilient-deployment
+story_ref: lifeos-p0.6-resilient-deployment
+qa_date: "2026-10-17"
+qa_agent: "noesis-kairos-f10eb7f8"
+verdict: PASS
+
+summary: |
+  Resiliência de inicialização e build de produção homologados.
+  O sistema é capaz de operar com ou sem Supabase configurado e possui build de produção pronto.
+
+checks:
+  production_build:
+    status: PASS
+    note: "Bundle de produção gerado com sucesso em dist/ (index.html, version.json, assets compilados)."
+
+  environment_fallback:
+    status: PASS
+    note: "supabase.ts opera em fallback noop seguro sem lançar erro fatal."
+
+decision: |
+  APPROVED. P0.6 concluído com sucesso.

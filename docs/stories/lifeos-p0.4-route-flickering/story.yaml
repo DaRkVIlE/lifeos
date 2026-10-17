@@ -1,0 +1,33 @@
+id: lifeos-p0.4-route-flickering
+title: "P0.4 — Eliminação de flickering e tela branca em transições de rota"
+priority: P0
+complexity: COMPLEX
+status: Done
+created_at: "2026-10-17"
+implemented_at: "2026-10-17"
+qa_gate: pass
+
+description: |
+  A troca de páginas causava piscadas bruscas e relances de tela branca/preta.
+  A causa raiz era uma conjunção de quatro fatores:
+  1) @view-transition com navigation: auto causando captura agressiva de snapshot na raiz do documento;
+  2) Layout sendo carregado via lazyRetry, fazendo a casca inteira suspender e cair no GlobalLoadingSpinner;
+  3) PageTransition forçando recriação completa do nó DOM via key={location.pathname};
+  4) Service worker forçando window.location.reload() em eventos de controllerchange.
+
+acceptance_criteria:
+  - "Nenhum flash branco ou recriação total da casca (Sidebar/Header) ao trocar de rota"
+  - "Layout shell importado estaticamente em App.tsx"
+  - "@view-transition nativo desativado em favor de transição CSS suave"
+  - "PageTransition reutiliza nó de container sem forçar destruição de DOM"
+  - "Service worker atualiza silenciosamente sem recarregar a janela ativa"
+  - "Stores só ativam loading skeleton na carga inicial (length === 0)"
+
+files_changed:
+  - src/App.tsx
+  - src/main.tsx
+  - src/components/PageTransition.tsx
+  - src/styles/design-system.css
+  - src/stores/useScheduleStore.ts
+  - src/stores/useFinanceStore.ts
+  - src/pages/Schedule.tsx

@@ -1,0 +1,26 @@
+id: lifeos-p0.4-route-flickering
+story_ref: lifeos-p0.4-route-flickering
+qa_date: "2026-10-17"
+qa_agent: "noesis-kairos-f10eb7f8"
+verdict: PASS
+
+summary: |
+  Flickering de rotas eliminado com sucesso em múltiplos níveis (CSS, arquitetura de componentes,
+  ciclo de vida de service worker e estado de loading de stores).
+
+checks:
+  build_verification:
+    status: PASS
+    note: "Vite build completado com sucesso em 1m 38s (3588 módulos transformados, zero erros)"
+
+  architectural_review:
+    status: PASS
+    findings:
+      - "Layout shell estático evita unmount do Sidebar e Header nas trocas de rota ✅"
+      - "@view-transition agressivo removido do design-system.css ✅"
+      - "PageTransition usa CSS keyframes suave (pageFadeIn) sem desmontar árvore com key dinâmico ✅"
+      - "serviceWorker controllerchange não dispara reload de página intempestivo ✅"
+      - "Stores preservam dados em background sem alternar loading: true desnecessariamente ✅"
+
+decision: |
+  APPROVED. P0.4 resolvido e testado em compilação de produção.

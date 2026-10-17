@@ -97,11 +97,13 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
   isOffline: false,
 
   fetchAll: async (options?: { skipSync?: boolean }) => {
-    const { lastFetched, loading } = get();
+    const { lastFetched, loading, habits } = get();
     if (loading) return;
     if (lastFetched && Date.now() - lastFetched < STALE_MS) return;
 
-    set({ loading: true });
+    if (habits.length === 0) {
+      set({ loading: true });
+    }
 
     try {
       // Wait for initial post-login sync before reading local DB

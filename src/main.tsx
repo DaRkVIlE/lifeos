@@ -57,14 +57,9 @@ if ('serviceWorker' in navigator) {
           logger.error('[SW] Registration failed:', error);
         });
 
-      // Reload page when new SW takes control (seamless update)
-      let refreshing = false;
+      // Log when new SW takes control without force-reloading the active page
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          logger.log('[SW] Controller changed, reloading...');
-          window.location.reload();
-        }
+        logger.log('[SW] Controller changed — new service worker active');
       });
     });
   } else {

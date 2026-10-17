@@ -308,7 +308,14 @@ export function Schedule() {
       else fetchMonthEvents();
     };
     window.addEventListener('lifeos-refresh', h);
-    const vis = () => { if (document.visibilityState === 'visible') h(); };
+    let lastVis = Date.now();
+    const vis = () => {
+      const now = Date.now();
+      if (document.visibilityState === 'visible' && now - lastVis > 60000) {
+        lastVis = now;
+        h();
+      }
+    };
     document.addEventListener('visibilitychange', vis);
     return () => {
       window.removeEventListener('lifeos-refresh', h);
