@@ -297,9 +297,9 @@ function AppRoutes() {
       );
     }
 
-    // 3. Synced mode: wait for profile to finish loading.
+    // 3. Synced mode: wait for profile to finish initial loading.
     // Profile creation (for new users) happens inside fetchProfile() in the store.
-    if (profileLoading) return showSpinner;
+    if (profileLoading && !profile) return showSpinner;
 
     // 4. Auto-mark onboarding complete for new users — they'll see Dashboard + SpotlightTour
     //    Realm onboarding is now opt-in via DashboardRealmInvite card
@@ -313,8 +313,8 @@ function AppRoutes() {
         .then(() => refreshProfile());
     }
   } else {
-    // 3. Local mode: wait for profile to load
-    if (profileLoading) return showSpinner;
+    // 3. Local mode: wait for initial profile to load
+    if (profileLoading && !profile) return showSpinner;
     if (profile && !profile.onboarding_complete) {
       profile.onboarding_complete = true;
       try {

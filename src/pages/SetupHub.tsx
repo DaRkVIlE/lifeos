@@ -1,172 +1,216 @@
 /**
- * Setup Hub — Landing page for Life Setup phases.
- * Shows 3 phase cards with NPC flavor text and progress.
+ * Setup Hub — Authentic LifeOS Crew Onboarding Journey
+ * Matches the original runlifeos.com experience:
+ * Selam (Host) -> Tena (Health) -> Menged (Life Foundations) -> Bereket (Finances)
  */
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '../stores/useUserStore';
-import { PHASE_ORDER, PHASES, getPhasePercents, getOverallPercent, type PhaseId } from '../lib/onboarding-phases';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
-import { assetPath } from '../utils/assets';
+import { getPhasePercents, type PhaseId } from '../lib/onboarding-phases';
+import {
+  ArrowLeft, ChevronRight, ChevronDown, Check,
+  Clock, Lock, FastForward, Sparkles,
+} from 'lucide-react';
+import './SetupHub.css';
 
-const NPC_FLAVOR: Record<PhaseId, { img: string; name: string; line: string }> = {
-  life: { img: '/images/npcs/sage.png', name: 'The Sage', line: 'Let me help you discover your values, goals, and purpose' },
-  health: { img: '/images/npcs/warrior.png', name: 'The Warrior', line: "Let's forge your body into a temple of strength" },
-  finance: { img: '/images/npcs/merchant.png', name: 'The Merchant', line: "I'll help you master the flow of gold" },
-};
+interface KeeperDef {
+  id: PhaseId;
+  keeperName: string;
+  role: string;
+  title: string;
+  description: string;
+  color: string;
+  route: string;
+}
 
-const ROUTE_MAP: Record<PhaseId, string> = {
-  life: '/setup/life',
-  health: '/setup/health',
-  finance: '/setup/finance',
-};
+const KEEPERS: KeeperDef[] = [
+  {
+    id: 'health',
+    keeperName: 'TENA',
+    role: 'KEEPER OF THE BODY',
+    title: 'Health & Body',
+    description: "Selam's first handoff: Tena maps sleep, movement, food, energy, and stress.",
+    color: '#4ADE80',
+    route: '/setup/health',
+  },
+  {
+    id: 'life',
+    keeperName: 'MENGED',
+    role: 'KEEPER OF YOUR COMPASS',
+    title: 'Life Foundations',
+    description: 'Then Menged names your values, goals, habits, and what matters most.',
+    color: '#38BDF8',
+    route: '/setup/life',
+  },
+  {
+    id: 'finance',
+    keeperName: 'BEREKET',
+    role: 'KEEPER OF YOUR MEANS',
+    title: 'Money & Finances',
+    description: 'Finally Bereket maps work, obligations, savings, and the money side.',
+    color: '#FBBF24',
+    route: '/setup/finance',
+  },
+];
 
 export function SetupHub() {
   const navigate = useNavigate();
   const profile = useUserStore(s => s.profile);
-  const prefs = (profile?.preferences || {}) as Record<string, any>;
+  const prefs = (profile?.preferences || {}) as Record<string, unknown>;
   const percents = getPhasePercents(prefs);
-  const overall = getOverallPercent(prefs);
+  const [faqOpen, setFaqOpen] = useState(false);
+
+  // Find first non-completed keeper for primary CTA
+  const nextKeeper = KEEPERS.find(k => (percents[k.id] || 0) < 100) || KEEPERS[0];
 
   return (
-    <div style={{
-      minHeight: '100dvh', background: '#050E1A',
-      display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
+    <div className="setup-hub-page">
+      {/* Top Header */}
+      <header className="setup-hub-header">
         <button
+          className="setup-hub-back-btn"
           onClick={() => navigate('/')}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center',
-            padding: 0, fontFamily: 'inherit',
-          }}
           aria-label="Back to dashboard"
         >
-          <ArrowLeft size={20} />
+          <ArrowLeft size={18} />
+          <span>Back to Today</span>
         </button>
-        <h1 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0, flex: 1 }}>
-          Life Setup
-        </h1>
-      </div>
+        <h1 className="setup-hub-header-title">Life Setup</h1>
+        <div style={{ width: 80 }} /> {/* Spacer for balance */}
+      </header>
 
-      <div style={{ padding: '16px 16px 32px', maxWidth: 520, margin: '0 auto', width: '100%' }}>
-        {/* Overall progress */}
-        <div style={{ textAlign: 'center', marginBottom: 28, padding: '20px 0' }}>
-          <div style={{
-            fontSize: 40, fontWeight: 800, color: '#00D4FF',
-            fontFamily: 'var(--font-display)', lineHeight: 1,
-          }}>
-            {overall}%
+      {/* Main Content Area */}
+      <main className="setup-hub-content">
+        {/* Hero Card */}
+        <section className="setup-hero-card">
+          <div className="setup-badge-crew">
+            <Sparkles size={13} />
+            <span>SELAM, THE FIRST FRIEND</span>
           </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>
-            {overall === 0 ? 'Personalize LifeOS to unlock its full power' :
-             overall >= 100 ? 'All set! Your LifeOS is fully configured.' :
-             'Keep going — each conversation makes LifeOS smarter'}
-          </div>
-        </div>
 
-        {/* Phase cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {PHASE_ORDER.map(id => {
-            const phase = PHASES[id];
-            const npc = NPC_FLAVOR[id];
-            const pct = percents[id];
-            const isDone = pct >= 100;
+          <h2 className="setup-hero-title">
+            Let's make LifeOS yours.
+          </h2>
+
+          <p className="setup-hero-subtitle">
+            One short journey with your Crew — your body first, then your path, then the means that carry it.
+          </p>
+
+          <div className="setup-pill-group">
+            <span className="setup-pill">
+              <Clock size={13} style={{ color: '#4ADE80' }} />
+              About 5 minutes
+            </span>
+            <span className="setup-pill">
+              <Lock size={13} style={{ color: '#38BDF8' }} />
+              Private to you
+            </span>
+            <span className="setup-pill">
+              <FastForward size={13} style={{ color: '#FBBF24' }} />
+              Skip anytime
+            </span>
+          </div>
+
+          <div className="setup-hero-actions">
+            <button
+              className="setup-primary-btn"
+              onClick={() => navigate(nextKeeper.route)}
+            >
+              <span>Begin with {nextKeeper.keeperName.charAt(0) + nextKeeper.keeperName.slice(1).toLowerCase()} ~5 min</span>
+              <ChevronRight size={16} />
+            </button>
+
+            <button
+              className="setup-secondary-link"
+              onClick={() => navigate('/')}
+            >
+              Skip for now — take me to Today
+            </button>
+          </div>
+        </section>
+
+        {/* The 3 Keepers Cards */}
+        <section className="setup-keepers-grid">
+          {KEEPERS.map(keeper => {
+            const pct = percents[keeper.id] || 0;
+            const isCompleted = pct >= 100;
 
             return (
-              <button
-                key={id}
-                onClick={() => {
-                  if (isDone) return;
-                  navigate(ROUTE_MAP[id]);
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '16px 18px',
-                  background: isDone
-                    ? 'rgba(78,203,113,0.06)'
-                    : `linear-gradient(135deg, ${phase.color}08, ${phase.color}04)`,
-                  border: `1px solid ${isDone ? 'rgba(78,203,113,0.2)' : phase.color + '25'}`,
-                  borderRadius: 14,
-                  cursor: isDone ? 'default' : 'pointer',
-                  textAlign: 'left', fontFamily: 'inherit',
-                  transition: 'all 0.2s ease', width: '100%',
-                }}
+              <div
+                key={keeper.id}
+                className={`setup-keeper-card ${isCompleted ? 'completed' : ''}`}
+                style={{ '--keeper-color': keeper.color } as React.CSSProperties}
+                onClick={() => navigate(keeper.route)}
               >
-                {/* NPC portrait */}
-                <img
-                  src={assetPath(npc.img)}
-                  alt={npc.name}
-                  style={{
-                    width: 52, height: 52, borderRadius: 12, flexShrink: 0,
-                    objectFit: 'cover',
-                    border: isDone ? '2px solid rgba(78,203,113,0.4)' : `1px solid ${phase.color}30`,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                    opacity: isDone ? 0.7 : 1,
-                  }}
-                />
-
-                {/* Info */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontSize: 15, fontWeight: 600,
-                    color: isDone ? '#4ECB71' : '#fff',
-                    marginBottom: 2,
-                  }}>
-                    {phase.title}
-                  </div>
-                  <div style={{
-                    fontSize: 12, color: 'rgba(255,255,255,0.4)',
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>
-                    {npc.name} — {npc.line}
-                  </div>
-                  {/* Progress bar */}
-                  {!isDone && (
-                    <div style={{
-                      marginTop: 8, height: 4, borderRadius: 2,
-                      background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
-                    }}>
-                      <div style={{
-                        height: '100%', borderRadius: 2,
-                        background: phase.color, width: `${pct}%`,
-                        transition: 'width 0.5s ease',
-                      }} />
-                    </div>
-                  )}
+                <div className="setup-keeper-left">
+                  <span className="setup-keeper-badge">
+                    {keeper.keeperName}, {keeper.role}
+                  </span>
+                  <h3 className="setup-keeper-title">
+                    {keeper.title}
+                  </h3>
+                  <p className="setup-keeper-desc">
+                    {keeper.description}
+                  </p>
                 </div>
 
-                {/* Right side */}
-                <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-                  {isDone ? (
-                    <span style={{ fontSize: 12, color: '#4ECB71', fontWeight: 600 }}>Done</span>
+                <div className="setup-keeper-right">
+                  {isCompleted ? (
+                    <span className="setup-keeper-status-done">
+                      <Check size={16} /> Completed
+                    </span>
                   ) : (
-                    <>
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginRight: 4 }}>
-                        {pct > 0 ? `${pct}%` : 'Start'}
-                      </span>
-                      <ChevronRight size={14} style={{ color: 'rgba(255,255,255,0.3)' }} />
-                    </>
+                    <span className="setup-keeper-btn">
+                      <span>{pct > 0 ? `${pct}% Continue` : 'Start'}</span>
+                      <ChevronRight size={14} />
+                    </span>
                   )}
                 </div>
-              </button>
+              </div>
             );
           })}
-        </div>
+        </section>
 
-        {/* Tip */}
-        <div style={{
-          marginTop: 20, padding: '12px 14px', borderRadius: 10,
-          background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.1)',
-          fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5,
-        }}>
-          Tip: <strong style={{ color: 'rgba(255,255,255,0.6)' }}>Each conversation</strong> takes 5-10 minutes and deeply personalizes your LifeOS experience. Start with Life Foundation, then build on it with Health and Finance.
-        </div>
-      </div>
+        {/* What is this? Accordion */}
+        <section className="setup-faq-accordion">
+          <button
+            type="button"
+            className="setup-faq-trigger"
+            onClick={() => setFaqOpen(prev => !prev)}
+            aria-expanded={faqOpen}
+          >
+            <span>What is this?</span>
+            <ChevronDown
+              size={16}
+              style={{
+                transform: faqOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+          </button>
+
+          {faqOpen && (
+            <div className="setup-faq-content">
+              <p>
+                <strong>The Crew</strong> is your personal AI council inside LifeOS. Instead of filling out hundreds of tedious settings forms, you have brief, focused conversations with three specialized Keepers:
+              </p>
+              <p>
+                • <strong>Tena (Health & Body):</strong> Establishes your sleep schedule, nutrition preferences, workout routine, and stress levels.
+              </p>
+              <p>
+                • <strong>Menged (Life Foundations):</strong> Helps clarify your core values, identity, quarterly goals, and daily habits.
+              </p>
+              <p>
+                • <strong>Bereket (Money & Finances):</strong> Organizes your income streams, budget targets, fixed bills, and financial security goals.
+              </p>
+              <p>
+                Everything learned is saved directly to your local database to personalize your Dashboard, schedule, recommendations, and progression trackers.
+              </p>
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
+export default SetupHub;

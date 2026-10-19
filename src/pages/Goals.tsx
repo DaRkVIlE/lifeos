@@ -138,16 +138,16 @@ export function Goals() {
   }, [contextMenuId]);
 
   const fetchGoals = async (isRefresh = false) => {
-    // Only show loading spinner on initial load, not on refreshes
-    // Refreshes should update data silently to avoid closing open panels
-    if (!isRefresh) setLoading(true);
+    // Only show loading skeleton on initial cold load if no goals exist, not on refreshes
+    // Refreshes should update data silently to avoid flicker or closing open panels
+    if (!isRefresh && goals.length === 0) setLoading(true);
     await Promise.all([
       useGoalsStore.getState().fetchAll(),
       useScheduleStore.getState().fetchAll(),
     ]);
     setGoals(useGoalsStore.getState().goals as unknown as GoalNode[]);
     setAllTasks(useScheduleStore.getState().tasks as unknown as GoalTask[]);
-    if (!isRefresh) setLoading(false);
+    setLoading(false);
   };
 
   const getHierarchy = useCallback((goalId: string | null): { id: string; title: string; icon: string; category: string }[] => {
@@ -1412,7 +1412,7 @@ export function Goals() {
       )}
 
       {/* Loading */}
-      {viewMode === 'list' && loading && <GoalsSkeleton />}
+      {loading && <GoalsSkeleton />}
 
       {/* Empty state */}
       {viewMode === 'list' && !loading && displayGoals.length === 0 && catFilter !== 'task' && (

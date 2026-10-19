@@ -19,9 +19,9 @@ interface PhaseCard {
 }
 
 const PHASE_CARDS: PhaseCard[] = [
-  { id: 'life',    npcImg: '/images/npcs/sage.png',     npcName: 'The Sage',     route: '/setup' },
-  { id: 'health',  npcImg: '/images/npcs/warrior.png',  npcName: 'The Warrior',  route: '/setup/health' },
-  { id: 'finance', npcImg: '/images/npcs/merchant.png', npcName: 'The Merchant', route: '/setup/finance' },
+  { id: 'health',  npcImg: '/images/npcs/warrior.png',  npcName: 'Tena — Keeper of the Body',     route: '/setup/health' },
+  { id: 'life',    npcImg: '/images/npcs/sage.png',     npcName: 'Menged — Keeper of Compass',     route: '/setup/life' },
+  { id: 'finance', npcImg: '/images/npcs/merchant.png', npcName: 'Bereket — Keeper of Means',    route: '/setup/finance' },
 ];
 
 interface SetupListProps {

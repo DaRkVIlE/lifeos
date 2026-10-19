@@ -5,11 +5,9 @@ import { useSubscription } from '../hooks/useSubscription';
 import { useSystemBus } from '../lib/systems/context';
 import { XPBar } from './gamification/XPBar';
 import { useGamificationContext } from '../lib/gamification/context';
-import { getErrorMessage } from '../utils/error';
 import { TutorialList } from './TutorialList';
 import { SetupList } from './SetupList';
 import { isTourComplete, type TourId } from './SpotlightTour';
-import { ProgressRing } from './ui/ProgressRing';
 import { getOverallPercent } from '../lib/onboarding-phases';
 
 const ALL_TOUR_IDS: TourId[] = ['dashboard', 'goals', 'habits', 'schedule', 'finance', 'health', 'junction', 'gamification'];
@@ -17,50 +15,61 @@ import './GamificationModal.css';
 
 const GamificationModal = lazy(() => import('./GamificationModal').then(m => ({ default: m.GamificationModal })));
 import {
-  LayoutDashboard, Calendar, Target, Flame, Wallet, Heart,
-  BookOpen, ChevronLeft, ChevronRight, ChevronDown,
-  LogOut, Zap, Settings, BarChart3, MessageSquarePlus, Crown, Users,
-  CreditCard, Loader2, Sparkles, Swords, Inbox, GraduationCap, Music, Package,
+  Compass, Calendar, Shield, GraduationCap, Users, BookOpen,
+  Landmark, Mountain, Flame, Briefcase, Heart,
+  Settings, Sparkles, MessageSquarePlus, Crown, LogOut,
+  ChevronLeft, ChevronRight, ChevronDown, Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { getUnreadCount } from '../lib/social/messaging';
-import { getNavFeatures } from '../lib/feature-registry';
 import './Sidebar.css';
 
-/** Map icon name strings from the feature registry to Lucide components. */
-const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutDashboard, Calendar, Target, Flame, Wallet, Heart,
-  BookOpen, Users, Swords, Settings, BarChart3, GraduationCap, Music, Package,
-};
-
-const NAV_ITEMS = getNavFeatures('sidebar').map(f => ({
-  to: f.route,
-  icon: ICON_MAP[f.icon] || LayoutDashboard,
-  label: f.name,
-  color: f.color,
-}));
+interface NavItemDef {
+  to: string;
+  icon: LucideIcon;
+  label: string;
+  color?: string;
+  hasBadge?: boolean;
+}
 
 interface NavSectionDef {
   id: string;
   label: string;
-  routes: string[];
+  items: NavItemDef[];
 }
 
-const NAV_SECTIONS: NavSectionDef[] = [
+const TOP_NAV_ITEMS: NavItemDef[] = [
+  { to: '/', icon: Compass, label: 'Today', color: '#00D4FF' },
+  { to: '/schedule', icon: Calendar, label: 'Schedule', color: '#60A5FA' },
+];
+
+const COLLAPSIBLE_SECTIONS: NavSectionDef[] = [
   {
-    id: 'core',
-    label: 'Core & Rotina',
-    routes: ['/', '/schedule', '/goals', '/habits'],
+    id: 'character',
+    label: 'Character',
+    items: [
+      { to: '/character', icon: Shield, label: 'Character', color: '#A855F7' },
+      { to: '/academy', icon: GraduationCap, label: 'Academy', color: '#38BDF8' },
+    ],
   },
   {
-    id: 'life',
-    label: 'Vida & Recursos',
-    routes: ['/finances', '/health', '/replicator', '/social'],
+    id: 'personality',
+    label: 'Personality',
+    items: [
+      { to: '/social', icon: Users, label: 'Social', color: '#EC4899', hasBadge: true },
+      { to: '/reflect', icon: BookOpen, label: 'Reflect', color: '#8B5CF6' },
+      { to: '/character?tab=realm', icon: Landmark, label: 'Commons', color: '#10B981' },
+    ],
   },
   {
-    id: 'growth',
-    label: 'Evolução & RPG',
-    routes: ['/character', '/reflect', '/academy', '/lessons'],
+    id: 'values',
+    label: 'Values',
+    items: [
+      { to: '/goals', icon: Mountain, label: 'Goals', color: '#22C55E' },
+      { to: '/habits', icon: Flame, label: 'Habits', color: '#F97316' },
+      { to: '/work', icon: Briefcase, label: 'Work', color: '#EAB308' },
+      { to: '/health', icon: Heart, label: 'Health', color: '#F43F5E' },
+    ],
   },
 ];
 
@@ -75,24 +84,27 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
   const collapsed = forceFull ? false : !expanded;
   const [gamOpen, setGamOpen] = useState(false);
   const [socialUnread, setSocialUnread] = useState(0);
-  const [upgrading, setUpgrading] = useState(false);
   const [tutorialListOpen, setTutorialListOpen] = useState(false);
   const [setupListOpen, setSetupListOpen] = useState(false);
   const user = useUserStore(s => s.user);
   const profile = useUserStore(s => s.profile);
   const signOut = useUserStore(s => s.signOut);
-  const { tier, upgrade, manageSubscription } = useSubscription();
   const { systemPages } = useSystemBus();
   const gam = useGamificationContext();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Tutorial completion progress — recheck when tutorial panel closes
+  // Tutorial completion progress
   const tutorialProgress = useMemo(() => {
     const done = ALL_TOUR_IDS.filter(id => isTourComplete(id)).length;
     return { done, total: ALL_TOUR_IDS.length };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tutorialListOpen]);
+
+  // Life Setup progress
+  const setupPercent = useMemo(() => {
+    const prefs = (profile?.preferences || {}) as Record<string, unknown>;
+    return getOverallPercent(prefs);
+  }, [profile?.preferences]);
 
   // Load social unread count
   useEffect(() => {
@@ -106,48 +118,53 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
 
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     try {
-      const saved = localStorage.getItem('lifeos_sidebar_sections');
+      const saved = localStorage.getItem('lifeos_sidebar_sections_v2');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { core: true, life: true, growth: true, systems: true };
+    return { character: true, personality: true, values: true, systems: true };
   });
 
   const toggleSection = (id: string) => {
     setOpenSections(prev => {
       const next = { ...prev, [id]: !(prev[id] ?? true) };
       try {
-        localStorage.setItem('lifeos_sidebar_sections', JSON.stringify(next));
+        localStorage.setItem('lifeos_sidebar_sections_v2', JSON.stringify(next));
       } catch {}
       return next;
     });
   };
 
-  /* ─────────────────────────────────────────────────────────────────
-   * IMPORTANT: Never use {!collapsed && <element>} to hide sidebar
-   * content. ALL elements must always be in the DOM. Visibility is
-   * controlled ONLY by CSS via the .collapsed class scoped to the
-   * desktop @media (min-width: 769px) query in Sidebar.css.
-   *
-   * This prevents the recurring mobile hamburger bug where labels
-   * disappear because React conditionally omits them from the DOM.
-   * ───────────────────────────────────────────────────────────────── */
+  const displayName = profile?.name || profile?.display_name || user?.email?.split('@')[0] || 'Gabriel Lima';
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`} aria-label="Main navigation">
-      {/* Logo + collapse */}
+      {/* Top Logo + Collapse */}
       <div className="sb-top">
-        <button className="sb-logo" onClick={() => navigate('/')} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0, display: 'flex', alignItems: 'center', gap: 8 }} aria-label="Go to dashboard">
-          <Zap size={22} className="sb-logo-icon" />
+        <button
+          className="sb-logo"
+          onClick={() => navigate('/')}
+          aria-label="Go to Today"
+        >
+          <Zap size={20} className="sb-logo-icon" />
           <span className="sb-brand">LifeOS</span>
         </button>
-        <button className="sb-collapse" onClick={onToggle} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+        <button
+          className="sb-collapse"
+          onClick={onToggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
 
-      {/* XP Bar — click to open full stats */}
+      {/* XP Bar Card — Click to open stats modal */}
       {!gam.loading && (
-        <div className="sb-xp-bar" style={{ padding: '0 12px 8px', cursor: 'pointer' }} onClick={() => setGamOpen(true)} title="View Player Stats">
+        <div
+          className="sb-xp-wrapper"
+          onClick={() => setGamOpen(true)}
+          title="View Player Stats"
+        >
           <XPBar
             compact
             level={gam.level}
@@ -159,29 +176,52 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
         </div>
       )}
 
-      {/* Nav */}
+      {/* Main Navigation Scroll Area */}
       <nav className="sb-nav" aria-label="Primary navigation">
-        {NAV_SECTIONS.map(section => {
-          const items = NAV_ITEMS.filter(item => section.routes.includes(item.to));
+        {/* Top Standalone Nav Items (Today, Schedule) */}
+        <div className="sb-top-links">
+          {TOP_NAV_ITEMS.map(item => {
+            const Icon = item.icon;
+            const active = location.pathname === item.to;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`sb-link ${active ? 'active' : ''}`}
+                title={item.label}
+              >
+                <div className="sb-icon-wrap" style={{ '--link-color': item.color } as React.CSSProperties}>
+                  <Icon size={18} />
+                </div>
+                <span className="sb-label">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+
+        {/* Collapsible Sections (Character, Personality, Values) */}
+        {COLLAPSIBLE_SECTIONS.map(section => {
           const isOpen = openSections[section.id] ?? true;
 
           return (
             <div key={section.id} className="sb-section">
-              {!collapsed && (
-                <button
-                  type="button"
-                  className="sb-section-header"
-                  onClick={() => toggleSection(section.id)}
-                  aria-expanded={isOpen}
-                >
-                  <span>{section.label}</span>
-                  <ChevronDown size={14} className={`sb-section-toggle-icon ${isOpen ? 'open' : 'closed'}`} />
-                </button>
-              )}
+              <button
+                type="button"
+                className="sb-section-header"
+                onClick={() => toggleSection(section.id)}
+                aria-expanded={isOpen}
+              >
+                <span className="sb-section-label">{section.label}</span>
+                <ChevronDown size={14} className={`sb-section-toggle-icon ${isOpen ? 'open' : 'closed'}`} />
+              </button>
               <div className={`sb-section-items ${!collapsed && !isOpen ? 'closed' : 'open'}`}>
-                {items.map(item => {
+                {section.items.map(item => {
                   const Icon = item.icon;
-                  const active = location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to));
+                  const isRealmTab = item.to.includes('tab=realm');
+                  const active = isRealmTab
+                    ? location.pathname === '/character' && location.search.includes('tab=realm')
+                    : (location.pathname === item.to || (item.to !== '/' && location.pathname.startsWith(item.to)));
+
                   return (
                     <NavLink
                       key={item.to}
@@ -193,11 +233,8 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
                         <Icon size={18} />
                       </div>
                       <span className="sb-label">{item.label}</span>
-                      {item.to === '/social' && socialUnread > 0 && (
-                        <span className="sb-badge" style={{
-                          marginLeft: 'auto', background: '#00D4FF', color: '#0A2540',
-                          borderRadius: 20, padding: '1px 7px', fontSize: 10, fontWeight: 700,
-                        }}>
+                      {item.hasBadge && socialUnread > 0 && (
+                        <span className="sb-badge">
                           {socialUnread}
                         </span>
                       )}
@@ -209,20 +246,18 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
           );
         })}
 
-        {/* Connected system pages */}
+        {/* Connected System Pages (Optional Plugins) */}
         {systemPages.length > 0 && (
           <div className="sb-section">
-            {!collapsed && (
-              <button
-                type="button"
-                className="sb-section-header"
-                onClick={() => toggleSection('systems')}
-                aria-expanded={openSections['systems'] ?? true}
-              >
-                <span>Sistemas</span>
-                <ChevronDown size={14} className={`sb-section-toggle-icon ${(openSections['systems'] ?? true) ? 'open' : 'closed'}`} />
-              </button>
-            )}
+            <button
+              type="button"
+              className="sb-section-header"
+              onClick={() => toggleSection('systems')}
+              aria-expanded={openSections['systems'] ?? true}
+            >
+              <span className="sb-section-label">Systems</span>
+              <ChevronDown size={14} className={`sb-section-toggle-icon ${(openSections['systems'] ?? true) ? 'open' : 'closed'}`} />
+            </button>
             <div className={`sb-section-items ${!collapsed && !(openSections['systems'] ?? true) ? 'closed' : 'open'}`}>
               {systemPages
                 .filter((p, i, arr) => arr.findIndex(x => x.path === p.path) === i)
@@ -247,123 +282,94 @@ export const Sidebar = React.memo(function Sidebar({ expanded = true, onToggle, 
         )}
       </nav>
 
-      {/* Footer */}
+      {/* Footer Area */}
       <div className="sb-footer">
-        <NavLink to="/settings" className="sb-link sb-settings-link" title="Settings">
-          <div className="sb-icon-wrap" style={{ '--link-color': '#64748B' } as React.CSSProperties}>
-            <Settings size={18} />
-          </div>
-          <span className="sb-label">Settings</span>
-        </NavLink>
+        {/* 2x2 Utilities Grid */}
+        <div className="sb-utils-grid">
+          <NavLink to="/settings" className="sb-util-btn" title="Settings">
+            <Settings size={15} className="sb-util-icon" />
+            <span className="sb-util-label">Settings</span>
+          </NavLink>
+
+          <button
+            type="button"
+            className="sb-util-btn"
+            onClick={() => setTutorialListOpen(true)}
+            title={`Tutorials (${tutorialProgress.done}/${tutorialProgress.total})`}
+          >
+            <GraduationCap size={15} className="sb-util-icon" />
+            <span className="sb-util-label">Tutorials</span>
+            <span className="sb-util-badge">{tutorialProgress.done}/{tutorialProgress.total}</span>
+          </button>
+
+          <button
+            type="button"
+            className="sb-util-btn"
+            onClick={() => navigate('/setup')}
+            title={`Life Setup (${setupPercent}%)`}
+          >
+            <Sparkles size={15} className="sb-util-icon" />
+            <span className="sb-util-label">Life Setup</span>
+            <span className="sb-util-badge">{setupPercent}%</span>
+          </button>
+
+          <button
+            type="button"
+            className="sb-util-btn"
+            onClick={() => document.dispatchEvent(new CustomEvent('open-feedback'))}
+            title="Send feedback"
+          >
+            <MessageSquarePlus size={15} className="sb-util-icon" />
+            <span className="sb-util-label">Feedback</span>
+          </button>
+        </div>
+
+        {/* Plan Badge (👑 Early Access — Free) */}
         <button
-          className="sb-link sb-tutorials-btn"
-          onClick={() => setTutorialListOpen(true)}
-          title={`Tutorials (${tutorialProgress.done}/${tutorialProgress.total})`}
-        >
-          <div className="sb-icon-wrap" style={{ '--link-color': '#D4AF37' } as React.CSSProperties}>
-            <GraduationCap size={18} />
-          </div>
-          <span className="sb-label">Tutorials</span>
-          {tutorialProgress.done < tutorialProgress.total && (
-            <div className="sb-tutorials-ring">
-              <ProgressRing
-                value={(tutorialProgress.done / tutorialProgress.total) * 100}
-                size={20}
-                strokeWidth={2.5}
-                color="#D4AF37"
-                glow={false}
-                animate={false}
-                centerContent={
-                  <span className="sb-tutorials-ring-text">
-                    {tutorialProgress.done}/{tutorialProgress.total}
-                  </span>
-                }
-              />
-            </div>
-          )}
-          {tutorialProgress.done === tutorialProgress.total && (
-            <span className="sb-tutorials-complete">✓</span>
-          )}
-        </button>
-        {(() => {
-          const prefs = (profile?.preferences || {}) as Record<string, unknown>;
-          const setupPercent = getOverallPercent(prefs);
-          return (
-            <button
-              className="sb-link sb-setup-btn"
-              onClick={() => setSetupListOpen(true)}
-              title={`Life Setup (${setupPercent}%)`}
-            >
-              <div className="sb-icon-wrap" style={{ '--link-color': '#00D4FF' } as React.CSSProperties}>
-                <Sparkles size={18} />
-              </div>
-              <span className="sb-label">Life Setup</span>
-              {setupPercent < 100 && (
-                <div className="sb-tutorials-ring">
-                  <ProgressRing
-                    value={setupPercent}
-                    size={20}
-                    strokeWidth={2.5}
-                    color="#00D4FF"
-                    glow={false}
-                    animate={false}
-                    centerContent={
-                      <span className="sb-tutorials-ring-text">
-                        {setupPercent}%
-                      </span>
-                    }
-                  />
-                </div>
-              )}
-              {setupPercent >= 100 && (
-                <span className="sb-tutorials-complete">✓</span>
-              )}
-            </button>
-          );
-        })()}
-        <button
-          className="sb-upgrade-btn"
-          title="Early Adopter — Pro Unlocked"
-          aria-label="Early Adopter Pro"
+          type="button"
+          className="sb-plan-btn"
+          title="Early Access — Free"
           onClick={() => {
-            alert('🎉 Early Adopter — Pro Unlocked!\n\nThank you for being one of the first to use LifeOS. All Pro features are yours for free.\n\nWe\'re building something special, and you\'re part of it from the beginning.');
-          }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', margin: '0 8px 8px',
-            background: 'linear-gradient(135deg, rgba(0,212,255,0.08), rgba(139,92,246,0.08))',
-            border: '1px solid rgba(0,212,255,0.2)', borderRadius: 10, color: '#00D4FF',
-            fontSize: 13, fontWeight: 500, cursor: 'pointer', transition: 'all 0.2s',
-            width: 'calc(100% - 16px)',
+            alert('👑 Early Access — Free\n\nAll premium LifeOS features are fully unlocked for early adopters.\n\nEnjoy the complete experience!');
           }}
         >
-          <Crown size={16} /> <span>Pro — Early Adopter</span>
+          <Crown size={15} className="sb-plan-icon" />
+          <span className="sb-plan-label">Early Access — Free</span>
         </button>
-        <button
-          className="sb-link sb-feedback-btn"
-          onClick={() => document.dispatchEvent(new CustomEvent('open-feedback'))}
-          aria-label="Send feedback"
-          title="Send feedback"
-        >
-          <div className="sb-icon-wrap" style={{ '--link-color': '#8BA4BE' } as React.CSSProperties}>
-            <MessageSquarePlus size={18} />
-          </div>
-          <span className="sb-label">Feedback</span>
-        </button>
+
+        {/* User Profile & Sign Out */}
         <div className="sb-user">
-          <span className="sb-email">{user?.email?.split('@')[0] || 'User'}</span>
-          <button className="sb-signout" onClick={signOut} aria-label="Sign out" title="Sign out">
+          <div className="sb-user-avatar">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={displayName} />
+            ) : (
+              <span>{initial}</span>
+            )}
+          </div>
+          <span className="sb-user-name" title={displayName}>
+            {displayName}
+          </span>
+          <button
+            className="sb-signout"
+            onClick={signOut}
+            aria-label="Sign out"
+            title="Sign out"
+          >
             <LogOut size={16} />
           </button>
         </div>
       </div>
+
       {/* Gamification Modal */}
       {gamOpen && (
         <Suspense fallback={null}>
           <GamificationModal open={gamOpen} onClose={() => setGamOpen(false)} />
         </Suspense>
       )}
+
       {/* Tutorial List Panel */}
       <TutorialList open={tutorialListOpen} onClose={() => setTutorialListOpen(false)} />
+
       {/* Setup List Panel */}
       <SetupList open={setupListOpen} onClose={() => setSetupListOpen(false)} />
     </aside>
