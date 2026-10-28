@@ -146,7 +146,7 @@ export function DashboardMorningBrief() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [gamModalOpen, setGamModalOpen] = useState(false);
   const xpAwardedRef = useRef(false);
 

@@ -42,7 +42,7 @@ export function ChatWidget() {
     // Only poll if subscription is not connected
     const interval = setInterval(() => {
       if (!subscriptionActive) refreshUnread();
-    }, 30_000);
+    }, 60_000);
 
     // Real-time subscription for new messages
     const unsub = subscribeToInbox(userId, (msg: Message) => {

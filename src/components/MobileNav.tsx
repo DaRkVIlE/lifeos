@@ -134,7 +134,7 @@ export function MobileNav() {
     getUnreadCount(user.id).then(setSocialUnread).catch(() => null);
     const interval = setInterval(() => {
       getUnreadCount(user.id).then(setSocialUnread).catch(() => null);
-    }, 30_000);
+    }, 60_000);
     const unsub = subscribeToInbox(user.id, () => {
       setSocialUnread(prev => prev + 1);
     });

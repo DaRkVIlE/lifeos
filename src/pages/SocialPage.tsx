@@ -86,7 +86,7 @@ export function SocialPage() {
     }).catch(() => setHasProfile(false));
     const interval = setInterval(() => {
       getUnreadCount(userId).then(setUnreadCount).catch(() => null);
-    }, 30_000);
+    }, 60_000);
     return () => clearInterval(interval);
   }, [userId]);
 

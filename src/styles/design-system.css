@@ -790,6 +790,7 @@
 .page-transition-container {
   width: 100%;
   min-height: 100%;
+  contain: layout style;
   animation: pageFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

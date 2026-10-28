@@ -354,14 +354,14 @@ export function Dashboard() {
               )}
             </div>
             <div className="dash-primary-col">
+              <FeatureErrorBoundary feature="Morning Brief" compact>
+                <DashboardMorningBrief />
+              </FeatureErrorBoundary>
               <FeatureErrorBoundary feature="Triage" compact>
                 <DashboardTriage />
               </FeatureErrorBoundary>
               <FeatureErrorBoundary feature="Overdue" compact>
                 <DashboardOverdue />
-              </FeatureErrorBoundary>
-              <FeatureErrorBoundary feature="Morning Brief" compact>
-                <DashboardMorningBrief />
               </FeatureErrorBoundary>
               <FeatureErrorBoundary feature="Stats" compact>
                 <DashboardStatsRow dayTasks={dayTasks} dayDoneTasks={dayDoneTasks} dayActiveTasks={dayActiveTasks}
@@ -370,6 +370,9 @@ export function Dashboard() {
               </FeatureErrorBoundary>
             </div>
             <div className="dash-secondary-col">
+              <FeatureErrorBoundary feature="Life Pulse" compact>
+                <DashboardLifePulse />
+              </FeatureErrorBoundary>
               <FeatureErrorBoundary feature="Realm Invite" compact>
                 <DashboardRealmInvite />
               </FeatureErrorBoundary>
@@ -381,9 +384,6 @@ export function Dashboard() {
               </FeatureErrorBoundary>
               <FeatureErrorBoundary feature="Celestial" compact>
                 <DashboardCelestial />
-              </FeatureErrorBoundary>
-              <FeatureErrorBoundary feature="Life Pulse" compact>
-                <DashboardLifePulse />
               </FeatureErrorBoundary>
             </div>
           </div>
