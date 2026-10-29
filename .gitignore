@@ -39,3 +39,9 @@ __pycache__/
 
 # Temporary
 CC-PROMPT.md
+
+# Personal context & Framework state (INV-12)
+m2g-local/
+*.local.md
+.aiox/
+.session-state.yaml

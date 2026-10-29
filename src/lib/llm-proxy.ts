@@ -44,7 +44,7 @@ async function _callLLMProxyOnce(
   const isLocalMode = import.meta.env.VITE_USE_LOCAL_API === 'true';
   const {
     provider = isLocalMode ? 'groq' : 'openrouter',
-    model = isLocalMode ? 'llama-3.3-70b-versatile' : undefined,
+    model = isLocalMode ? 'openai/gpt-oss-120b' : undefined,
     timeoutMs = DEFAULT_TIMEOUT_MS,
     skipAuth = false,
     format = 'text',

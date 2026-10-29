@@ -4,8 +4,8 @@
 
 .sidebar {
   width: 240px;
-  height: 100vh;
-  max-height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
   background: linear-gradient(180deg, #0B111E 0%, #060A12 100%);
   -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
@@ -89,6 +89,7 @@
 /* ── Navigation List ── */
 .sb-nav {
   flex: 1;
+  min-height: 0; /* CRITICAL: allows flex child to scroll independently */
   display: flex;
   flex-direction: column;
   gap: 6px;

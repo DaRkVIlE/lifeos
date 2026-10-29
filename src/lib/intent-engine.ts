@@ -1014,7 +1014,7 @@ interface ProxyConfig {
 
 const _isLocalMode = import.meta.env.VITE_USE_LOCAL_API === 'true';
 const _defaultProvider = _isLocalMode ? 'groq' : 'openrouter';
-const _defaultModel = _isLocalMode ? 'llama-3.3-70b-versatile' : 'google/gemini-2.0-flash-001';
+const _defaultModel = _isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
 
 const DEFAULT_PROXY_CONFIG: ProxyConfig = {
   provider: _defaultProvider,
@@ -2310,7 +2310,7 @@ export function getAISettings(): AISettings {
   const defaults: AISettings = {
     // In local/Railway mode the backend proxies to Groq directly
     provider: isLocalMode ? 'groq' : 'openrouter',
-    model: isLocalMode ? 'llama-3.3-70b-versatile' : 'google/gemini-2.0-flash-001',
+    model: isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001',
     proxyUrl: '/api/llm-proxy.php',
     enabled: true,
   };
@@ -2321,14 +2321,14 @@ export function getAISettings(): AISettings {
       // Force provider to a valid allowed provider if unrecognized
       if (!ALLOWED_PROVIDERS.includes(parsed.provider)) {
         parsed.provider = isLocalMode ? 'groq' : 'openrouter';
-        parsed.model = isLocalMode ? 'llama-3.3-70b-versatile' : 'google/gemini-2.0-flash-001';
+        parsed.model = isLocalMode ? 'openai/gpt-oss-120b' : 'google/gemini-2.0-flash-001';
       }
       if (isLocalMode) {
         parsed.proxyUrl = '/api/llm-proxy.php';
         // Always use groq in Railway/local mode
         parsed.provider = 'groq';
         if (!parsed.model || parsed.model.includes('gemini') || parsed.model.includes('gpt-oss') || parsed.model.includes('claude')) {
-          parsed.model = 'llama-3.3-70b-versatile';
+          parsed.model = 'openai/gpt-oss-120b';
         }
       }
       return { ...defaults, ...parsed };

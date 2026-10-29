@@ -914,7 +914,14 @@ def _migrate_tables(db):
             if col_name not in cols:
                 db.execute(f"ALTER TABLE user_profiles ADD COLUMN {col_name} {col_type}")
                 print(f"[LifeOS Migration] Added column {col_name} to user_profiles")
-        db.execute("UPDATE user_profiles SET display_name = full_name WHERE (display_name IS NULL OR display_name = '') AND full_name IS NOT NULL")
+        db.execute("""
+            UPDATE user_profiles 
+            SET display_name = CASE WHEN display_name IS NULL OR display_name = '' OR display_name = 'GABE' OR display_name = 'Gabriel Lima (GABE)' THEN 'Gabriel Lima (Nekko)' ELSE display_name END,
+                full_name = CASE WHEN full_name IS NULL OR full_name = '' OR full_name = 'Gabriel Lima (GABE)' THEN 'Gabriel Lima' ELSE full_name END,
+                occupation = CASE WHEN occupation IS NULL OR occupation = '' THEN 'Founder & AI Developer' ELSE occupation END,
+                primary_focus = CASE WHEN primary_focus IS NULL OR primary_focus = '' THEN 'Experia — Plataforma de IA para educação corporativa' ELSE primary_focus END
+            WHERE user_id = 'local-user-001'
+        """)
         db.commit()
     except Exception as e:
         print(f"[LifeOS Migration Warning] {e}")
@@ -1548,10 +1555,17 @@ def _execute_llm_call(messages, req_model=None, req_format='text'):
             "Authorization": f"Bearer {groq_key}",
             "Content-Type": "application/json"
         }
-        valid_groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "mixtral-8x7b-32768"]
-        groq_model = req_model or os.environ.get('GROQ_MODEL') or "llama-3.3-70b-versatile"
+        # Models available on this verified Groq key (tested live via API)
+        valid_groq_models = [
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant"
+        ]
+        groq_model = req_model or os.environ.get('GROQ_MODEL') or "openai/gpt-oss-120b"
         if groq_model not in valid_groq_models:
-            groq_model = "llama-3.3-70b-versatile"
+            groq_model = "openai/gpt-oss-120b"
         payload = {"model": groq_model, "messages": messages}
         if req_format == 'json':
             payload["response_format"] = {"type": "json_object"}
